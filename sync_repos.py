@@ -4,6 +4,7 @@
 将远端仓库克隆到临时目录，移除 .git，然后覆盖到本仓库的 subdir 目录下。
 最后在本仓库根目录做一次 commit/push（如果有变更）。
 
+已修改：在处理完所有仓库后一次性提交（而不是多次提交）。提交信息会列出被更新的子目录。
 注意：
 - 依赖系统 git；
 - 在 GitHub Actions 中运行时，actions/checkout 提供的凭证会被用以推送变更。
@@ -70,7 +71,7 @@ def main():
 
     tmp_root = tempfile.mkdtemp(prefix="sync-repos-")
     log("Using temp root:", tmp_root)
-    changed = False
+    updated_subdirs = []
 
     for subdir, url in entries:
         log(f"Processing [{subdir}] = {url}")
@@ -104,14 +105,14 @@ def main():
         try:
             shutil.move(clone_path, target_path)
             log("Moved cloned repo to", target_path)
-            changed = True
+            updated_subdirs.append(subdir)
         except Exception as e:
             log("ERROR moving cloned repo to target:", e)
             # Try fallback: copy tree
             try:
                 shutil.copytree(clone_path, target_path)
                 log("Copied cloned repo to", target_path)
-                changed = True
+                updated_subdirs.append(subdir)
             except Exception as e2:
                 log("ERROR fallback copy failed:", e2)
                 continue
@@ -122,7 +123,11 @@ def main():
     except Exception:
         pass
 
-    # Commit & push if changes exist
+    # Commit & push once if there were updates
+    if not updated_subdirs:
+        log("No repositories were updated — nothing to commit.")
+        return
+
     try:
         # Configure git user for committing
         actor = os.environ.get("GITHUB_ACTOR", "github-actions[bot]")
@@ -133,17 +138,23 @@ def main():
         # Stage all changes
         run([GIT, "add", "-A"], check=True)
 
-        # Check status
+        # Double-check there are changes to commit
         status = subprocess.run([GIT, "status", "--porcelain"], stdout=subprocess.PIPE, text=True)
         if status.stdout.strip():
             now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-            message = f"Sync external repos: {now}"
+            # Create a concise commit message listing updated subdirs
+            # If too many subdirs, show count and first few names.
+            max_list = 10
+            display_list = updated_subdirs if len(updated_subdirs) <= max_list else updated_subdirs[:max_list]
+            names = ", ".join(display_list)
+            suffix = "" if len(updated_subdirs) <= max_list else f", and {len(updated_subdirs) - max_list} more"
+            message = f"Sync external repos ({len(updated_subdirs)}): {names}{suffix}\n\nSynced at {now}"
             run([GIT, "commit", "-m", message], check=True)
             # Push using upstream from actions/checkout credential helper
             run([GIT, "push"], check=True)
             log("Pushed changes.")
         else:
-            log("No changes to commit.")
+            log("No changes to commit after staging.")
     except Exception as e:
         log("ERROR during git commit/push:", e)
         sys.exit(1)
