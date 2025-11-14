@@ -1,0 +1,32 @@
+{
+	"urls": [
+		{
+			"name": "潇洒无盘",
+			"url": "https://gb.hfr1107.top/https://raw.githubusercontent.com/ediart/tvbox/refs/heads/main/TVBoxOSC/tvbox/xs.json"
+		},
+		{
+			"name": "潇洒",
+			"url": "https://gb.hfr1107.top/https://raw.githubusercontent.com/ediart/tvbox/refs/heads/main/TVBoxOSC/tvbox/api.json"
+		},
+		{
+			"name": "音乐",
+			"url": "https://gb.hfr1107.top/https://raw.githubusercontent.com/ediart/tvbox/refs/heads/main/music.json"
+		},
+		{
+			"name": "老张+",
+			"url": "https://gb.hfr1107.top/https://raw.githubusercontent.com/ediart/tvbox/refs/heads/main/lz/aa.json"
+		},
+		{
+			"name": "T4+",
+			"url": "https://gb.hfr1107.top/https://raw.githubusercontent.com/ediart/tvbox/refs/heads/main/T4.json"
+		},
+		{
+			"name": "PY+",
+			"url": "https://gb.hfr1107.top/https://raw.githubusercontent.com/ediart/tvbox/refs/heads/main/lz/py.json"
+		},
+		{
+			"name": "PY2+",
+			"url": "https://gb.hfr1107.top/https://raw.githubusercontent.com/ediart/tvbox/refs/heads/main/lz/py2.json"
+		}
+	]
+}
