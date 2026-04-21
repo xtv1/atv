@@ -1,59 +1,48 @@
-name: 自动更新 TVBox 配置
+name: updata FuLi.json
 
 on:
   schedule:
-    - cron: "0 21 * * *"  # 每天 UTC 21:00 (北京时间 5:00)
-    - cron: "0 9 * * *"   # 每天 UTC 9:00 (北京时间 17:00)
-  workflow_dispatch:  # 允许手动触发
+    - cron: '0 2 * * *'
   push:
-    branches：[ main ]
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write  # 确保有写入权限
 
 jobs:
-  merge:
+  update-tv-json:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write  # 授予写入权限
-    
+
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.MY_GITHUB_TOKEN }}
-          fetch-depth: 0
-      
-      - name: 设置 Python 环境
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      
-      - name: 安装依赖
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
-      
-      - name: 运行合并脚本
-        env:
-          MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
-          GITHUB_REPO: ${{ github.repository }}
-          GITHUB_BRANCH: ${{ github.ref_name }}
-        run: |
-          echo "开始执行合并脚本..."
-          python merge_FuLi.py
-      
-      - name: 提交并推送更改
-        if: success()
-        run: |
-          echo "检查文件变更..."
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # 检查 FuLi.json 是否有变化
-          if git diff --name-only | grep -q "FuLi.json"; then
-            echo "检测到 FuLi.json 有变更，准备提交"
-            git add FuLi.json
-            git commit -m "🔄 自动更新站点配置 [$(date +'%Y-%m-%d %H:%M:%S')]"
-            git push origin ${{ github.ref_name }}
-            echo "✅ 已提交并推送变更"
-          else
-            echo "没有检测到变更，跳过提交"
-          fi
+    - name: 检出仓库代码
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ github.ref_name }}  # ✅ 修正：取分支名，无 refs/heads/ 前缀
+
+    - name: 设置 Python 环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+
+    - name: 运行 Python 脚本生成 FuLi.json
+      env:
+        MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+        GITHUB_REPO: ${{ github.repository }}
+        GITHUB_BRANCH: ${{ github.ref_name }}
+      run: |
+        python merge_FuLi.py
+
+    - name: 提交并推送 FuLi.json
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add FuLi.json
+        git commit -m "Update FuLi.json by GitHub Actions"
+        git push origin main --force  # 强制推送（谨慎使用！）

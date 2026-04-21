@@ -194,6 +194,17 @@
       "changeable": 0
     },
     {
+      "key": "csp_ShuaiJiao",
+      "name": "🤺摔跤┃体育",
+      "jar": "https://daili.korice.eu.org/https://raw.githubusercontent.com/leexuben/BINGO-TV/refs/heads/main/jar/vox.jar",
+      "type": 3,
+      "api": "csp_ShuaiJiao",
+      "searchable": 0,
+      "quickSearch": 1,
+      "filterable": 0,
+      "ext": "[object Object]"
+    },
+    {
       "key": "d'd",
       "name": "修罗|弹幕",
       "type": 3,
@@ -4142,34 +4153,357 @@
       "jar": "https://ghfast.top/https://raw.githubusercontent.com/ls125781003/tvboxtg/main/小米/spider.jar"
     },
     {
-      "key": "csp_ShuaiJiao",
-      "name": "🤺摔跤┃体育",
-      "jar": "https://daili.korice.eu.org/https://raw.githubusercontent.com/leexuben/BINGO-TV/refs/heads/main/jar/vox.jar",
+      "key": "豆瓣预告",
+      "name": "🐼┃豆瓣┃预告",
       "type": 3,
-      "api": "csp_ShuaiJiao",
-      "searchable": 0,
+      "api": "csp_YGP",
+      "playerType": 2,
+      "searchable": 0
+    },
+    {
+      "key": "living",
+      "name": "🐼┃游戏┃直播",
+      "type": 3,
+      "api": "csp_Living",
+      "playerType": 2,
+      "ext": "https://lemonlive-api-1.deno.dev"
+    },
+    {
+      "key": "csp_FeiMaoUC",
+      "name": "⚡┃闪电┃优汐",
+      "type": 3,
+      "api": "csp_Duopan",
+      "filterable": 1,
+      "ext": {
+        "site_urls": [
+          "https://shandian.blog/",
+          "https://sd.sduc.site"
+        ],
+        "url_key": "FeiMaoUC"
+      }
+    },
+    {
+      "key": "潮流",
+      "name": "🏜┃潮流┃APP",
+      "type": 3,
+      "api": "csp_AppRJ",
+      "ext": "http://v.rbotv.cn"
+    },
+    {
+      "key": "肥猫",
+      "name": "🐼┃肥猫┃APP",
+      "type": 3,
+      "api": "csp_AppGet",
+      "ext": "https://wsapi.dafenqi.mom/yuming.txt|bH5mI8iK0tK7aQ5x"
+    },
+    {
+      "key": "干饭",
+      "name": "🍚┃干饭┃APP",
+      "type": 3,
+      "api": "csp_AppGet",
+      "ext": "http://www.613mf4k12.top|1234567887654321"
+    },
+    {
+      "key": "光盘",
+      "name": "📀┃光盘┃APP",
+      "type": 3,
+      "api": "csp_AppQi",
+      "ext": "https://uututv-1319209748.cos.ap-shanghai.myqcloud.com/uutuv4.txt|UrWKPnmQWJA8AQzd"
+    },
+    {
+      "key": "行动",
+      "name": "😌┃行动┃APP",
+      "type": 3,
+      "api": "csp_AppGet",
+      "ext": "http://165.99.42.137:5432|1234567890987654"
+    },
+    {
+      "key": "再来",
+      "name": "✌️┃再来┃APP",
+      "type": 3,
+      "api": "csp_AppGet",
+      "ext": "https://cy.baige.asia|599D0FE5178642FD"
+    },
+    {
+      "key": "一碗",
+      "name": "🥣┃一碗┃APP",
+      "type": 3,
+      "api": "csp_AppGet",
+      "ext": "https://vv.229d.cn|8888888888888888"
+    },
+    {
+      "key": "猫抓",
+      "name": "🐱┃猫抓┃APP",
+      "type": 3,
+      "api": "csp_AppGet",
+      "ext": "https://app.95112475.xyz|5a9w6x58dsq6z3a6"
+    },
+    {
+      "key": "仓鼠",
+      "name": "🐹┃耗子┃APP",
+      "type": 3,
+      "api": "csp_AppGet",
+      "ext": "http://xywlkj.oss-cn-beijing.aliyuncs.com/wp-content/uploads/2024/12/1.txt|xmyxmyxywlkjxywl"
+    },
+    {
+      "key": "蔬菜",
+      "name": "🫛┃蔬菜┃APP",
+      "type": 3,
+      "api": "csp_AppGet",
+      "ext": "https://gitee.com/wmmoliill/wimg/raw/master/img/bk/9.txt|88689667dce61725"
+    },
+    {
+      "key": "黑猫",
+      "name": "🐼┃黑猫┃APP",
+      "type": 3,
+      "api": "csp_AppGet",
+      "ext": "https://qiyiys.cc|45452893929B40D9"
+    },
+    {
+      "key": "兔子",
+      "name": "🐇┃兔子┃APP",
+      "type": 3,
+      "api": "csp_AppGet",
+      "ext": "https://dyyztvappapigoodgx.68.gy:12689/ciwk28vu38io8/apiurl.txt|dyyztvapiappyyds"
+    },
+    {
+      "key": "永永",
+      "name": "♾️┃永永┃APP",
+      "type": 3,
+      "api": "csp_AppGet",
+      "ext": "https://bind.315999.xyz/89.txt|#getapp@TMD@2025|120"
+    },
+    {
+      "key": "火猫",
+      "name": "😻┃火猫┃APP",
+      "type": 3,
+      "api": "csp_AppNox",
+      "ext": "K7euwjrJ27dYwEGVkeGRDLiIPbDgofNjwCk3p5BrxKe1WWueWIgazExL7KeqSINJOPRzkplAOtP+hTXxaeVDeOccRBahLmupQ3fYc6ogNk5FiENWm5pQSXsfQ6128/WfOimIH4TLkzA04Y6EFxXaLi3Wtmv9wRqBB7W7abNwXzDNx5lbJf6xgU6KLRt1d4N7NVfZCB6DW2T34TpuYagoWg=="
+    },
+    {
+      "key": "csp_AppSymx",
+      "name": "🏔┃️木兮┃APP",
+      "type": 3,
+      "api": "csp_Symx"
+    },
+    {
+      "key": "csp_AppJg",
+      "name": "🍧┃坚果┃APP",
+      "type": 3,
+      "api": "csp_AppJg"
+    },
+    {
+      "key": "3Q",
+      "name": "3️⃣┃3Q┃APP",
+      "type": 3,
+      "api": "csp_App3Q"
+    },
+    {
+      "key": "csp_AppXY",
+      "name": "🎀️┃星牙┃短剧",
+      "type": 3,
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/ls125781003/tvboxtg/main/肥猫/api/XYDJ.py",
+      "searchable": 1,
+      "changeable": 1,
       "quickSearch": 1,
-      "filterable": 0,
-      "ext": "[object Object]"
+      "filterable": 1
+    },
+    {
+      "key": "📺┃︎剧王┃短剧",
+      "name": "📺┃剧王┃短剧",
+      "type": 3,
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/ls125781003/tvboxtg/main/肥猫/api/JWDJ.py",
+      "searchable": 1,
+      "changeable": 1,
+      "quickSearch": 1,
+      "filterable": 1
+    },
+    {
+      "key": "csp_SP360",
+      "name": "📺┃360┃官源",
+      "type": 3,
+      "api": "csp_SP360"
+    },
+    {
+      "key": "csp_Dm84",
+      "name": "🤣┃动漫┃巴士",
+      "type": 3,
+      "playerType": "2",
+      "api": "csp_Dm84",
+      "ext": "https://dm84.net"
+    },
+    {
+      "key": "丫丫",
+      "name": "🐷┃丫丫┃动漫",
+      "type": 3,
+      "api": "csp_AppGet",
+      "ext": "http://tv.yy-fun.cc|qkxnwkfjwpcnwycl"
+    },
+    {
+      "key": "csp_FirstAid",
+      "name": "🚑┃急救┃教学",
+      "type": 3,
+      "api": "csp_FirstAid",
+      "searchable": 0,
+      "quickSearch": 0,
+      "style": {
+        "type": "rect",
+        "ratio": 3.8
+      },
+      "gridview": "0-0-4.1"
+    },
+    {
+      "key": "酷狗",
+      "name": "🐾┃酷狗┃音乐",
+      "type": 3,
+      "api": "csp_Kugou",
+      "playerType": 2,
+      "ext": {
+        "classes": [
+          {
+            "type_name": "酷狗",
+            "type_id": "kugou"
+          }
+        ]
+      }
+    },
+    {
+      "key": "drpy_js_310直播",
+      "name": "🏀┃体育┃直播",
+      "type": 3,
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/ls125781003/tvboxtg/main/肥猫/api/drpy2.min.js",
+      "changeable": 0,
+      "gridview": 3,
+      "style": {
+        "type": "list"
+      },
+      "ext": "https://img2.gelonghui.com/library/d6014-7a5d5b19-3fe5-456a-8335-925bc845606fnull"
+    },
+    {
+      "key": "csp_PanSearch",
+      "name": "🚃┃盘搜┃网盘",
+      "type": 3,
+      "api": "csp_PanSearch",
+      "ext": "http://127.0.0.1:9978/file/TVBox/token.txt"
+    },
+    {
+      "key": "儿童",
+      "name": "📚┃儿童┃启蒙",
+      "type": 3,
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/ls125781003/tvboxtg/main/肥猫/api/drpy2.min.js",
+      "searchable": 0,
+      "quickSearch": 0,
+      "changeable": 0,
+      "style": {
+        "type": "rect",
+        "ratio": 1.597
+      },
+      "ext": "https://ghfast.top/https://raw.githubusercontent.com/ls125781003/tvboxtg/main/肥猫/js/兔小贝.js"
+    },
+    {
+      "key": "csp_少儿",
+      "name": "📚┃少儿┃教育",
+      "type": 3,
+      "api": "csp_Bili",
+      "playerType": 2,
+      "ext": {
+        "json": "https://img2.gelonghui.com/library/1903b-eb0f1675-2437-4e72-bcf0-427b1626d79fnull",
+        "cookie": ""
+      },
+      "style": {
+        "type": "rect",
+        "ratio": 1.333
+      }
+    },
+    {
+      "key": "csp_小学",
+      "name": "📚┃小学┃课堂",
+      "type": 3,
+      "api": "csp_Bili",
+      "playerType": 2,
+      "ext": {
+        "json": "https://img2.gelonghui.com/library/a1140-144855fe-3eaa-44f3-b689-6812c233de54null",
+        "cookie": ""
+      },
+      "style": {
+        "type": "rect",
+        "ratio": 1.333
+      }
+    },
+    {
+      "key": "csp_初中",
+      "name": "📚┃初中┃课堂",
+      "type": 3,
+      "api": "csp_Bili",
+      "playerType": 2,
+      "ext": {
+        "json": "https://img2.gelonghui.com/library/ba156-73e16cad-8257-4f33-b8c0-e051e72e546dnull",
+        "cookie": ""
+      },
+      "style": {
+        "type": "rect",
+        "ratio": 1.333
+      }
+    },
+    {
+      "key": "csp_高中",
+      "name": "📚┃高中┃课堂",
+      "type": 3,
+      "api": "csp_Bili",
+      "playerType": 2,
+      "ext": {
+        "json": "https://img2.gelonghui.com/library/e44b3-4a82ab48-e014-49b2-bb66-ee5207e8f195null",
+        "cookie": ""
+      },
+      "style": {
+        "type": "rect",
+        "ratio": 1.333
+      }
+    },
+    {
+      "key": "顾我",
+      "name": "顾我｜APP",
+      "type": 3,
+      "api": "csp_AppDrama",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 1,
+      "ext": {
+        "appName": "顾我追剧",
+        "publicKey": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCduNEnfxGaLuQRk5ABzXHhPV43zi00sCHjLo8BYc+Wi6xXm2b4v0i28Sq4WlNCKhseft9fz8kO/qLr6/022o1RcuOU7e4GFL3U9WnNODwRBYSYWd+K8nqpI/tAUDmZEBGRWqjrc7x6aMl3A+xpnWkLbPCLsuhbuuUE3tv09oeOpwIDAQAB",
+        "publicIv": "ed5fdsgucxumegqa",
+        "dataKey": "QK40VUWYWE45L0DOSTVOTEP0AM44PQ==",
+        "dataIv": "OC1A06E197EF10CF3F6058CA7A803B5E",
+        "pkg": "com.bingewatch.android",
+        "host": "",
+        "site": "https://guwoandroid-1372779881.cos.ap-guangzhou.myqcloud.com/app_guwozhuijuandroid.txt",
+        "version": "2.0.0.1",
+        "decrypt": "0"
+      }
+    },
+    {
+      "key": "薯条",
+      "name": "薯条｜APP",
+      "type": 3,
+      "api": "csp_AppDrama",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 1,
+      "ext": {
+        "appName": "薯条影视",
+        "publicKey": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCduNEnfxGaLuQRk5ABzXHhPV43zi00sCHjLo8BYc+Wi6xXm2b4v0i28Sq4WlNCKhseft9fz8kO/qLr6/022o1RcuOU7e4GFL3U9WnNODwRBYSYWd+K8nqpI/tAUDmZEBGRWqjrc7x6aMl3A+xpnWkLbPCLsuhbuuUE3tv09oeOpwIDAQAB",
+        "publicIv": "ed5fdsgucxumegqa",
+        "dataKey": "A1VACZJWDKRZY1P3MFV0DDRAZ3F3PT0=",
+        "dataIv": "OC1A06E197EF10CF3F6058CA7A803B5E",
+        "pkg": "com.st.standroid",
+        "host": "",
+        "site": "https://dyttandroid-1372779881.cos.ap-guangzhou.myqcloud.com/app_dyttandroid.txt",
+        "version": "5.0.0.1",
+        "decrypt": "0"
+      }
     }
   ],
   "lives": [
-    {
-      "name": "live",
-      "type": 0,
-      "url": "https://ghfast.top/https://raw.githubusercontent.com/leexuben/BINGO-TV/refs/heads/main/tv/TVS.txt",
-      "playerType": 1,
-      "epg": "http://epg.112114.xyz/?ch={name}&date={date}",
-      "logo": "https://epg.112114.xyz/logo/{name}.png"
-    },
-    {
-      "name": "tv",
-      "type": 0,
-      "url": "https://hub.gitmirror.com/raw.githubusercontent.com/leexuben/BINGO-TV/refs/heads/main/tv/ZBTV.txt",
-      "playerType": 1,
-      "epg": "http://epg.112114.xyz/?ch={name}&date={date}",
-      "logo": "https://epg.112114.xyz/logo/{name}.png"
-    },
     {
       "name": "migu",
       "type": 0,
@@ -4214,10 +4548,8 @@
     {
       "name": "develop202",
       "type": 0,
-      "url": "https://gh.927223.xyz/https://raw.githubusercontent.com/develop202/migu_video/refs/heads/main/interface.txt",
-      "playerType": 2,
-      "epg": "http://diyp5.112114.xyz/?ch={name}&date={date}",
-      "logo": "https://epg.112114.xyz/logo/{name}.png"
+      "url": "https://ghfast.top/https://raw.githubusercontent.com/ls125781003/tvboxtg/main/肥猫/lives/develop202.txt",
+      "epg": "http://diyp5.112114.xyz/?ch={name}&date={date}"
     },
     {
       "name": "范明明（需开启V6网络）",
