@@ -9,7 +9,7 @@
     //"spider": "https://storage.7x24cc.com/storage-server/presigned/ss1/a6-online-fileupload/newMediaImage/4C1FF0E_773_wex_20251125202938981newMediaImage.png",//王二小弹幕
     //"spider": "https://pan.qingyuji.cn/f/Pm3yi4/1028logo.jpg",//小米弹幕
    //"spider": "https://www.lequxiang.com.cn/down.php/eef74b7957e73ed47ee624bb0c67c9b2.txt",//潇洒
-    "spider": "https://gitee.com/youngxiayang/TVBOX/raw/main/jar/myDM.jar",
+    "spider": "https://raw.giteeusercontent.com/youngxiayang/YJL/raw/master/JAR/myDM.jar",
     //"spider": "https://storage.7x24cc.com/storage-server/presigned/ss1/a6-online-fileupload/newMediaFile/5EE1360_773_okpng_20250919184254519newMediaFile.png;md5;4675eeed7adff0f35976ab076da9f1de",//OK弹幕
     //"spider": "https://ghfast.top/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/refs/heads/main/custom_spider.jar",
     "sites": [{"key": "Douban","name":"🐠摸鱼┃豆瓣","type": 3,"api": "csp_DoubanFishGuard",
