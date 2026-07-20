@@ -210,7 +210,6 @@ NOW新闻,http://bxtv.3a.ink/api.php?id=now
 💃快手热舞,http://qej6c.716888.xyz/fenlei/zj/heji1/heji1.php?
 💃快手热舞,http://xjj2.716888.xyz/fenlei/tkxjj/tk.php
 💃快手热舞,http://api.yujn.cn/api/sbkl.php
-//💃快手热舞,https://jiejie.uk/xjj/get/video.php
 💃快手热舞,https://v.nrzj.vip/tiktok/video.php
 💃快手热舞,https://xn--vusr00g.v.nxog.top/m/tv/xjj.php?id=2
 💃快手热舞,http://xjj2.716888.xyz/fenlei/zj/gengxin/gengxin.php
@@ -231,14 +230,14 @@ NOW新闻,http://bxtv.3a.ink/api.php?id=now
 💃快手热舞,https://xn--vusr00g.v.nxog.top/m/tv/xjj.php?id=1
 💃快手热舞,https://xn--vusr00g.v.nxog.top/m/tv/xjj.php?id=2
 💃快手热舞,https://jiejie.uk/xjj/tiktok/video.php
+🐟顾止最爱的小胖宝贝,https://live.ottiptv.cc/douyu/238643
+🐟親愛的老公丶,https://live.ottiptv.cc/douyu/6739424
+🐟少打白骨精,https://live.ottiptv.cc/douyu/11531165
 💃快手热歌,http://epimw.716888.xyz/fenlei/djxjj/dj1.php
 💃快手热歌,http://xjj1.716888.xyz/fenlei/djxjj/dj1.php
 💃快手热歌,https://188sp.711888.xyz/188/video.php
 💃快手热歌,http://api.yujn.cn/api/ks_fc.php
 💃快手热歌,http://qej6c.716888.xyz/fenlei/mvmn/mvmn.php?
-🐟顾止最爱的小胖宝贝,https://live.ottiptv.cc/douyu/238643
-🐟親愛的老公丶,https://live.ottiptv.cc/douyu/6739424
-🐟少打白骨精,https://live.ottiptv.cc/douyu/11531165
 🐱YY-991,http://cfss.cc/cdn/yy/991.m3u8
 🐱YY-991,https://live.ottiptv.cc/yy//54880976
 🐯虎牙小石榴,https://live.ottiptv.cc/huya/17091681
@@ -652,6 +651,7 @@ Brazzers,http://dns.acaidopara.net:8080/live/p4QWXI7QjA/k5koiqnbam/51042.m3u8
 Brazzers 1,http://dns.acaidopara.net:8080/live/p4QWXI7QjA/k5koiqnbam/76621.m3u8
 Balkan Erotic HD,http://hidra.live:80/LVH60Ml8Hc/O4XSkHm6Yj/35344
 待测试,#genre#
+快手热舞,https://jiejie.uk/xjj/get/video.php
 古风杰伦民谣Rap向唱见~,https://live.ottiptv.cc/douyu/9595715
 穿透音乐AAA,https://live.ottiptv.cc/douyu/8671698
 吾恩的音乐世界,https://live.ottiptv.cc/douyu/9631914
