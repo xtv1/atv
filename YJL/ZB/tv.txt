@@ -239,7 +239,7 @@ NOW新闻,http://bxtv.3a.ink/api.php?id=now
 💃快手热歌,http://api.yujn.cn/api/ks_fc.php
 💃快手热歌,http://qej6c.716888.xyz/fenlei/mvmn/mvmn.php?
 🐱YY-991,http://cfss.cc/cdn/yy/991.m3u8
-🐱YY-991,https://live.ottiptv.cc/yy//54880976
+🐱YY-991,https://live.ottiptv.cc/yy/54880976
 🐯虎牙小石榴,https://live.ottiptv.cc/huya/17091681
 🐟斗鱼音乐,https://live.ottiptv.cc/douyu/9674665
 🐟车模欣赏,https://live.ottiptv.cc/douyu/7356023
@@ -464,6 +464,16 @@ NewTV相声小品,http://newstreamcdnct.inter.ptqy.gitv.tv:80/tslive/c59_fast_10
 埋堆堆61,https://live.ottiptv.cc/huya/23728674
 埋堆堆62,https://live.ottiptv.cc/huya/23863818
 🇹🇼🇭🇰🇺🇸🇯🇵🇰🇷_8888,#genre#
+彩虹R,http://58.99.33.2:1935/liveedge2/Kyjyomsn_408_1/chunklist_w114642605.m3u8?checkCode=37050688asdfsdfsadf&aa=60999&as=abcdefg&mmmm=&dr=123&dt=&cust_type=NE
+松视1台,http://58.99.33.2:1935/liveedge2/Kyjyomsn_406_1/chunklist_w1350191092.m3u8?checkCode=37050688asdfsdfsadf&aa=60999&as=abcdefg&mmmm=&dr=123&dt=&cust_type=NE
+松视2台,http://58.99.33.2:1935/liveedge2/Kyjyomsn_407_1/chunklist_w452892769.m3u8?checkCode=37050688asdfsdfsadf&aa=60999&as=abcdefg&mmmm=&dr=123&dt=&cust_type=NE
+松视3台,http://58.99.33.2:1935/liveedge2/Kyjyomsn_404_1/chunklist_w1221017520.m3u8?checkCode=37050688asdfsdfsadf&aa=60999&as=abcdefg&mmmm=&dr=123&dt=&cust_type=NE
+玩家,http://58.99.33.2:1935/liveedge2/Kyjyomsn_401_1/chunklist_w452892769.m3u8?checkCode=37050688asdfsdfsadf&aa=60999&as=abcdefg&mmmm=&dr=123&dt=&cust_type=NE
+happy,http://58.99.33.2:1935/liveedge2/Kyjyomsn_402_1/chunklist_w452892769.m3u8?checkCode=37050688asdfsdfsadf&aa=60999&as=abcdefg&mmmm=&dr=123&dt=&cust_type=NE
+HOT,http://58.99.33.2:1935/liveedge2/Kyjyomsn_403_1/chunklist_w452892769.m3u8?checkCode=37050688asdfsdfsadf&aa=60999&as=abcdefg&mmmm=&dr=123&dt=&cust_type=NE
+乐活,http://58.99.33.2:1935/liveedge2/Kyjyomsn_410_1/chunklist_w452892769.m3u8?checkCode=37050688asdfsdfsadf&aa=60999&as=abcdefg&mmmm=&dr=123&dt=&cust_type=NE
+潘多拉完美,http://58.99.33.2:1935/liveedge2/Kyjyomsn_411_1/chunklist_w452892769.m3u8?checkCode=37050688asdfsdfsadf&aa=60999&as=abcdefg&mmmm=&dr=123&dt=&cust_type=NE
+香蕉台,http://58.99.33.2:1935/liveedge2/Kyjyomsn_414_1/chunklist_w452892769.m3u8?checkCode=37050688asdfsdfsadf&aa=60999&as=abcdefg&mmmm=&dr=123&dt=&cust_type=NE
 欧美放映厅,http://01yowzbola.wljzml.top/live/cx_375008.flv
 欧美放映厅,http://dewlaboing.imwyt.top/live/cx_375008.flv
 欧美放映厅,http://lashfoaw064.abrillantlee.top/live/cx_375008.flv
