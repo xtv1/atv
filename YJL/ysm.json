@@ -1,8 +1,7 @@
 {   
-     "wallpaper": "https://www.yumus.cn/api/?target=img&brand=360&type=0",//4k=0,meinv=1，aiqing=2，风景=3，动漫=5，mingxing=6，萌宠动物=7，游戏=8，汽车=9，炫酷=10，剧照=11，junshi=12，体育壁纸=13，wenzi=14
     "logo": "https://codeberg.org/yjl/TVBOX/raw/branch/main/ysm20260131012405.jpg",
   //"wallpaper": "https://api.yujn.cn/api/gzl_ACG.php",//动漫壁纸
-    //"wallpaper": "https://api.yujn.cn/api/pcfjsp.php",//动漫视频壁纸
+    "wallpaper": "https://api.yujn.cn/api/pcfjsp.php",//动漫视频壁纸
     //"wallpaper": "https://wp.upx8.com/api.php?content=风景",//自定关键字
     //"wallpaper": "http://qej6c.716888.xyz/fenlei/api/beijing.php",//动态壁纸
     
@@ -102,9 +101,9 @@
 		{"key":"天天","name":"💯小米┃秒播","type":3,"quickSearch":1,"searchable":1,
       "jar":"https://www.lnjubao.cn/minio-jbpt/upload/20260717/5829d919fb4c5697c5e882205771f2c9.jpg;md5;d4b90caf39f26ffe54006225c273e0da",
       "api":"csp_AppRJ","ext":"vxw35/hHSj07Q+maxQzOVMq1rjRCOTXpUCx8iKu5jIg="},
-              {"key": "橙子","name": "🍊小米┃橙子","type": 3,"api": "csp_App99","ext": {
-              "jar":"https://www.lnjubao.cn/minio-jbpt/upload/20260717/5829d919fb4c5697c5e882205771f2c9.jpg;md5;d4b90caf39f26ffe54006225c273e0da",
-                "host": "http://113.31.180.218:19987/app/bn",
+        {"key": "橙子","name": "🍊小米┃橙子高清","type": 3,"api": "csp_App99",
+        "jar":"https://www.lnjubao.cn/minio-jbpt/upload/20260717/5829d919fb4c5697c5e882205771f2c9.jpg;md5;d4b90caf39f26ffe54006225c273e0da",
+        "ext": {"host": "http://113.31.180.218:19987/app/bn",
                 "LoginPath": "/app/log",
                 "appkey": "6e8f3764a0644f3686ab5cdd57bcdf48",
                 "versionName": "4.3.1",
@@ -199,6 +198,8 @@
 		        {"name": "🐻嗷呜┃漫剧","key": "MjHggg","type": 3,"api": "csp_HgggAmns","searchable": 0,"quickSearch": 0,"changeable": 0,
 			"jar":"https://cdn.waimaimingtang.com/file/images/bwc/20260710134123-31654126d0.ong;md5;d9d9860d4e1e16888fbf06b510978542",			
             "ext": "comic_series"},
+            {"key": "wddj","name": "🐬海豚┃黄豆魔改","type": 3,
+            "api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/黄豆短剧(魔改).py"},
         {"key": "csp_XYQHiker_兔小贝","name":"🐰兔小贝(XYQH)","type":3,"api":"csp_XYQHiker","searchable":1,"quickSearch":1,"filterable":1,
         "jar":"https://ghfast.top/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/refs/heads/main/custom_spider.jar",
         "ext":"https://ghfast.top/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/refs/heads/main/XYQHiker/兔小贝.json"},
