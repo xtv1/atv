@@ -199,7 +199,7 @@
 			"jar":"https://cdn.waimaimingtang.com/file/images/bwc/20260710134123-31654126d0.ong;md5;d9d9860d4e1e16888fbf06b510978542",			
             "ext": "comic_series"},
             {"key": "wddj","name": "🐬海豚┃黄豆魔改","type": 3,
-            "api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/黄豆短剧(魔改).py"},
+            "api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/黄豆短剧.py"},
         {"key": "csp_XYQHiker_兔小贝","name":"🐰兔小贝(XYQH)","type":3,"api":"csp_XYQHiker","searchable":1,"quickSearch":1,"filterable":1,
         "jar":"https://ghfast.top/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/refs/heads/main/custom_spider.jar",
         "ext":"https://ghfast.top/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/refs/heads/main/XYQHiker/兔小贝.json"},
