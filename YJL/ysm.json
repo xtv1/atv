@@ -4,11 +4,11 @@
     "wallpaper": "https://api.yujn.cn/api/pcfjsp.php",//动漫视频壁纸
     //"wallpaper": "https://wp.upx8.com/api.php?content=风景",//自定关键字
     //"wallpaper": "http://qej6c.716888.xyz/fenlei/api/beijing.php",//动态壁纸
-    
+    "danmaku": "http://127.0.0.1:5266/danmu/webhtv?name={name}&episode={episode}",
     //"spider": "http://pan.0076sf.cn/f/dPbHG/07101403.png;md5;4e485fbd3b8a48b61e0a90774dd58b9d",//王二小弹幕
     //"spider": "https://pan.qingyuji.cn/f/Pm3yi4/1028logo.jpg",//小米弹幕
    //"spider": "https://www.lequxiang.com.cn/down.php/eef74b7957e73ed47ee624bb0c67c9b2.txt",//潇洒
-    "spider": "https://6800.kstore.vip/fish07201538.jar;md5;5e0a00965bfa93bc2c79af173e35852d",
+    "spider": "https://tc-new.z.wiki/autoupload/iYHTWVx6T8RrCmqdGD6MOdiO_OyvX7mIgxFBfDMDErs/20260720/8d8t/fish07201538.jar;md5;5e0a00965bfa93bc2c79af173e35852d",
     //"spider": "https://storage.7x24cc.com/storage-server/presigned/ss1/a6-online-fileupload/newMediaFile/5EE1360_773_okpng_20250919184254519newMediaFile.png;md5;4675eeed7adff0f35976ab076da9f1de",//OK弹幕
     //"spider": "https://ghfast.top/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/refs/heads/main/custom_spider.jar",
     "sites": [{"name":"🐶嗷呜┃豆瓣推荐","key":"Douban","type":3,"api":"csp_DoubanAmns","indexs":1,"searchable":0,"quickSearch":0,"changeable":0,
@@ -99,10 +99,10 @@
 		"jar":"https://cdn.waimaimingtang.com/file/images/bwc/20260710134123-31654126d0.ong;md5;d9d9860d4e1e16888fbf06b510978542",	
 			"searchable":1,"quickSearch":1,"changeable":0},
 		{"key":"天天","name":"💯小米┃秒播","type":3,"quickSearch":1,"searchable":1,
-      "jar":"https://www.lnjubao.cn/minio-jbpt/upload/20260717/5829d919fb4c5697c5e882205771f2c9.jpg;md5;d4b90caf39f26ffe54006225c273e0da",
+      "jar":"https://zkaicc.huilan.com/aicc/api/aicc-file/miniofile/preViewPicture/aicc/1CqpaRCV_1784884059047.jpg;md5;db2c1c3ef8d2d5d3481303f21f80593c",
       "api":"csp_AppRJ","ext":"vxw35/hHSj07Q+maxQzOVMq1rjRCOTXpUCx8iKu5jIg="},
         {"key": "橙子","name": "🍊小米┃橙子高清","type": 3,"api": "csp_App99",
-        "jar":"https://www.lnjubao.cn/minio-jbpt/upload/20260717/5829d919fb4c5697c5e882205771f2c9.jpg;md5;d4b90caf39f26ffe54006225c273e0da",
+        "jar":"https://zkaicc.huilan.com/aicc/api/aicc-file/miniofile/preViewPicture/aicc/1CqpaRCV_1784884059047.jpg;md5;db2c1c3ef8d2d5d3481303f21f80593c",
         "ext": {"host": "http://113.31.180.218:19987/app/bn",
                 "LoginPath": "/app/log",
                 "appkey": "6e8f3764a0644f3686ab5cdd57bcdf48",
@@ -111,20 +111,20 @@
                 "package": "com.xchengzix.app",
                 "buildNumber": "2001",
                 "buildSignature": "99DA983CF878CEC016616175464A91A94775E20A489F07F76FCDEA1A0F2B6B45"}},
-{"key": "爱营","name": "💥小米┃爱影清晰","type": 3,"searchable": 1,"changeable": 1,"api": "csp_AppGet",
-  "jar":"https://www.lnjubao.cn/minio-jbpt/upload/20260717/5829d919fb4c5697c5e882205771f2c9.jpg;md5;d4b90caf39f26ffe54006225c273e0da",
-  "ext": "https://aysappto.oss-cn-chengdu.aliyuncs.com/q23.txt|nzEqOgYk3QzHuEP8|V122|okhttp/3.10.0"},
+{"key": "爱营","name": "💥小米┃爱影4K","type": 3,"searchable": 1,"changeable": 1,"api": "csp_AppGet",
+  "jar":"https://zkaicc.huilan.com/aicc/api/aicc-file/miniofile/preViewPicture/aicc/1CqpaRCV_1784884059047.jpg;md5;db2c1c3ef8d2d5d3481303f21f80593c",
+  "ext": "https://aysappto.oss-cn-chengdu.aliyuncs.com/q26.txt|0UKM8jkasM8tdzgW|V122|okhttp/3.10.0"},
 		{"key": "3QQQ","name": "🍅小米┃大鹅国漫","type": 3,"timeout": 15,"api": "csp_App3Q",
-          "jar":"https://www.lnjubao.cn/minio-jbpt/upload/20260717/5829d919fb4c5697c5e882205771f2c9.jpg;md5;d4b90caf39f26ffe54006225c273e0da",
+          "jar":"https://zkaicc.huilan.com/aicc/api/aicc-file/miniofile/preViewPicture/aicc/1CqpaRCV_1784884059047.jpg;md5;db2c1c3ef8d2d5d3481303f21f80593c",
           "ext":"https://asd123sx23xdacsx.top"},
       		{"key": "csp_Jpys","name": "🏆小米┃金牌高清","type": 3,"timeout": 12,"searchable": 1,"quickSearch": 0,"api": "csp_Jpys",
-              "jar":"https://www.lnjubao.cn/minio-jbpt/upload/20260717/5829d919fb4c5697c5e882205771f2c9.jpg;md5;d4b90caf39f26ffe54006225c273e0da",
+              "jar":"https://zkaicc.huilan.com/aicc/api/aicc-file/miniofile/preViewPicture/aicc/1CqpaRCV_1784884059047.jpg;md5;db2c1c3ef8d2d5d3481303f21f80593c",
               "ext": "https://y2s52n7.com"},
       		{"key": "葫芦","name": "🍈小米┃葫芦","type": 3,"api": "csp_AppGet",
-              "jar":"https://www.lnjubao.cn/minio-jbpt/upload/20260717/5829d919fb4c5697c5e882205771f2c9.jpg;md5;d4b90caf39f26ffe54006225c273e0da",
+              "jar":"https://zkaicc.huilan.com/aicc/api/aicc-file/miniofile/preViewPicture/aicc/1CqpaRCV_1784884059047.jpg;md5;db2c1c3ef8d2d5d3481303f21f80593c",
               "ext": "https://mobile-1251126973.cos.ap-guangzhou.myqcloud.com/maccos_config.txt|8R33VQSxzmCaHpEX|V122|okhttp/3.10.0"},
         {"key": "麦田","name": "🌾小米┃麦田AI短剧","type": 3,"api": "csp_AppV6",
-        "jar":"https://www.lnjubao.cn/minio-jbpt/upload/20260717/5829d919fb4c5697c5e882205771f2c9.jpg;md5;d4b90caf39f26ffe54006225c273e0da",
+        "jar":"https://zkaicc.huilan.com/aicc/api/aicc-file/miniofile/preViewPicture/aicc/1CqpaRCV_1784884059047.jpg;md5;db2c1c3ef8d2d5d3481303f21f80593c",
         "ext": "http://172.247.227.203:25321/mtys.php"},
         {"key":"WexBDys","name":"🐮二小独播┃弹幕","type":3,"api":"csp_WexDuBoKuGuard","searchable":1,"changeable":1,
         //"jar":"https://nos.netease.com/ysf/0b4f27394aaa1e7c3a2e543a6c4d89ff.jar;md5;1262dc40ed916e6d67c9015e6b4af2bd"},

@@ -448,6 +448,9 @@ IPTV,#genre#
 抗战经典影片,http://47.119.24.76:59093/617432318
 新片放映厅,http://47.119.24.76:59093/619495952
 
+峨眉电影,http://222.214.208.34:59901/tsfile/live/1004_1.m3u8
+潇湘电影,http://110.53.235.13:19901/tsfile/live/1006_1.m3u8?key=txiptv&playlive=1&authid=0
+
 BRTV新闻,http://route.079915.xyz:4022/rtp/239.3.1.159:8000
 BRTV影视,http://route.079915.xyz:4022/rtp/239.3.1.158:8000
 BRTV文艺,http://route.079915.xyz:4022/rtp/239.3.1.242:8000
@@ -659,6 +662,9 @@ VOA美国之音,https://voa-ingest.akamaized.net/hls/live/2033878/tvmc08/playlis
 NTD TV,https://ntd02.akamaized.net/NTD-UK/index.m3u8
 环球电视,http://utv1.hqtvzb.com:9999/hls/world.m3u8
 
+凤凰影视, http://221.7.175.154:8445/tsfile/live/1022_1.m3u8?key=txiptv&playlive=1&authid=0
+凤凰卫视, http://221.7.175.154:8445/tsfile/live/1020_1.m3u8?key=txiptv&playlive=1&authid=0
+凤凰资讯, http://221.7.175.154:8445/tsfile/live/1021_1.m3u8?key=txiptv&playlive=1&authid=0
 
 
 astroFootball,http://iptv.4666888.xyz/iptv2A.php?id=4
@@ -724,7 +730,6 @@ DAZN体育-2,rtmp://f13h.mine.nu/sat/tv741
 
 
 地方台,#genre#
-上海
 宝山电视台,http://l2yx82zv.live2.danghongyun.com/live/hls/8be0890a1b0c4d7aaf80b51ea8646682/5a8988f5ecc64986a19aa9b6b3a052a6-1.m3u8
 西宁新闻综合,https://liveout.xntv.tv/a65jur/96iln2.m3u8
 滨海新闻,http://traffic.jbh.tjbh.com/live/bhtv10/playlist.m3u8
@@ -1224,6 +1229,14 @@ DAZN体育-2,rtmp://f13h.mine.nu/sat/tv741
 河南梨园,http://live.dxhmt.cn:9080/19903718786/3159ec673c114135816d45dd52ad7396.m3u8
 
 网络直播,#genre#
+成龙,http://222.186.39.38:8000/333207/index.m3u8
+周星驰,http://222.186.39.38:8000/028749/index.m3u8
+周润发电影,http://222.186.39.38:8000/587078/index.m3u8
+林正英,http://222.186.39.38:8000/782774/index.m3u8
+赌片系列,http://222.186.39.38:8000/634435/index.m3u8
+科幻电影,http://222.186.39.38:8000/882696/index.m3u8
+复仇电影,http://222.186.39.38:8000/435615/index.m3u8
+超级英雄系列,http://222.186.39.38:8000/091331/index.m3u8
 
 武林外传,https://lvbdcdncmn.inter.71edge.com/tslive/l1/c52_lb_553_300_t10/I67sb6wvoWaxfjPEdSuB8xyBShFln4Poub7LGIzPt5oGLcKaLXD21aR_t20nEIxJFmaf_i6EYQ77gA-gLJ3xOTtq6K7hpgCREwLfbuNMXruJdFta9-ai9bYk4cTMbhQgRh9SCkE3yt46X4E0qOVADDdga3TMRSLnFscFYr-_s4Sd2sgykmnFa4-hdgX9599FiW_RX5VYGH9B1jyj748_CAu4VgqqTDwxUx8w556tCWY7mlb1r84RWuip72e4H8-HkUuBUoFeD4aw9m1HOUfgwx7ixDqJUFOmq9F-LeKLTZ2Ap6fobRuaUiaSqHsCWvuy9XWe5KWBiZv6bUJ8oAuqkA/1a6758d872929c8d41a7629db52a831f7/c52_lb_553_300_t10.m3u8?key=0baa5db205ac0d29618a2e8d7964b7e4e&dis_t=1752408084&uuid=6f1d53dc-6873a014-459&qdpv=3&qd_bid=1&qd_sft=0&pv=0.1&cpt=0
 
