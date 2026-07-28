@@ -4,20 +4,46 @@
 //"spider":"https://fs-im-kefu.7moor-fs2.com/im/2768a390-5474-11ea-afc9-7b323e3e16c0/YT6QM5eC.png;md5;b3249d225e1e720653fc6dbf6fde21e6",
 "sites":[
     {
-    "name": "LEO| 弹幕",
-    "key": "leo 弹幕",
+            "name": "弹幕",
+            "key": "弹幕豆瓣",
+            "type": 3,
+            "api": "csp_SecureDanmu",
+            "searchable": 1,
+            "jar": "https://ghfast.top/https://raw.githubusercontent.com/goodcommunication/mydm/main/danmu-spider-native.jar",
+            "ext": {
+            "apiUrls": [
+            "https://danmu.iyo.us.ci/theft-dastardly-prognosis-hula-agenda2-dropkick|公益源",
+            "https://logo.saodu.work:8888/87654321|公益源1",
+            "https://dm.ljiaovm.com/luosen|公益源2"
+            ],
+            "titleMappingsUrl": "https://ghfast.top/https://raw.githubusercontent.com/goodcommunication/mydm/main/yins.json",
+            "filter": "./lib/douban.json"
+         }},
+         {
+    "key": "dr_腾讯影视[官]",
+    "name": "腾讯影视[官]",
     "type": 3,
-    "api": "csp_DanmakuSpider",
-    "searchable": 1,
-    "jar": "https://gh-proxy.org/https://github.com/Silent1566/CatVodSpider/raw/refs/heads/main/jar/danmu.jar",
-    "ext": {
-        "apiUrl": "LogVar弹幕API端点",
-        "autoPushEnabled": true,
-        "danmakuStyle": "经典模式",
-        "proxyPort": 5575,
-        "lpAlpha": 0.9
-    }
+    "api": "https://gh.jasonzeng.dev/https://raw.githubusercontent.com/jak0099/dr/refs/heads/master/libs/drpy2.min.js",
+    "ext": "http://corper.cn/down.php/e8c3972f096e03de98bb7e4904f87893.js"
 },
+    		{
+			"key": "djjh",
+			"name": "🐬短剧聚合.py",
+			"type": 3,
+			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/短剧聚合.py"
+		},
+        		{
+			"key": "hxq",
+			"name": "🐬韩小圈.py(关梯)",
+			"type": 3,
+			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/韩小圈.py"
+		},
+		{
+			"key": "美剧天堂",
+			"name": "🐬美剧天堂.py(关梯)",
+			"type": 3,
+			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/美剧天堂.py"
+		},
     {
 			"key": "wddj",
 			"name": "🐬黄豆短剧.py 有🔞[短剧]",
@@ -47,6 +73,13 @@
 			"name": "🐬韩国Pandalive直播.py｜🔞[成人直播]",
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/Pandalive直播.py"
+		},
+        		{
+			"key": "麻豆",
+			"name": "🐬麻豆.js｜🔞",
+			"type": 3,
+			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/jar_js/麻豆.js",
+			"changeable": 0
 		},
 		{
 			"key": "007qg",
