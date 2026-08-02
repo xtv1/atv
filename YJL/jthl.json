@@ -50,6 +50,18 @@
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/黄豆短剧.py"
 		},
+            {
+			"key": "qjdj",
+			"name": "🐬青桔短剧.py 有🔞[短剧]",
+			"type": 3,
+			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/青桔短剧.py"
+		},
+            {
+			"key": "hdyy",
+			"name": "🐬花都影院.py 有🔞[成人]",
+			"type": 3,
+			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/花都影院.py"
+		},
 {
 			"key": "shjb",
 			"name": "🐬色播聚合.py｜🔞[成人直播]",
