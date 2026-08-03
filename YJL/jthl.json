@@ -1,24 +1,10 @@
 {
 //{"type": "0表达xml，1表达json，3表达jar内置json","name":"资源名称","type":0,"api":"csp_〔jar内文件名称〕","searchable":1,"quickSearch":1,"filterable":0,"jar":"〔jar文件地址〕","ext":"〔txt json文件地址〕","playUrl":"〔播放解析地址〕","categories":["〔自定义资源列表〕","〔自定义资源列表〕"] },
+"danmaku": "http://127.0.0.1:5266/danmu/webhtv?name={name}&episode={episode}",
 "spider":"https://gitee.com/lwlxh/tvhome/raw/master/o.jar",
 //"spider":"https://fs-im-kefu.7moor-fs2.com/im/2768a390-5474-11ea-afc9-7b323e3e16c0/YT6QM5eC.png;md5;b3249d225e1e720653fc6dbf6fde21e6",
 "sites":[
-    {
-            "name": "弹幕",
-            "key": "弹幕豆瓣",
-            "type": 3,
-            "api": "csp_SecureDanmu",
-            "searchable": 1,
-            "jar": "https://ghfast.top/https://raw.githubusercontent.com/goodcommunication/mydm/main/danmu-spider-native.jar",
-            "ext": {
-            "apiUrls": [
-            "https://danmu.iyo.us.ci/theft-dastardly-prognosis-hula-agenda2-dropkick|公益源",
-            "https://logo.saodu.work:8888/87654321|公益源1",
-            "https://dm.ljiaovm.com/luosen|公益源2"
-            ],
-            "titleMappingsUrl": "https://ghfast.top/https://raw.githubusercontent.com/goodcommunication/mydm/main/yins.json",
-            "filter": "./lib/douban.json"
-         }},
+
          {
     "key": "dr_腾讯影视[官]",
     "name": "腾讯影视[官]",
@@ -61,6 +47,12 @@
 			"name": "🐬花都影院.py 有🔞[成人]",
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/花都影院.py"
+		},
+        {
+			"key": "ad",
+			"name": "🐬艾旦影视.py 有🔞[成人]",
+			"type": 3,
+			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/艾旦影视🔞.py"
 		},
 {
 			"key": "shjb",
