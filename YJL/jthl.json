@@ -46,7 +46,7 @@
 			"key": "hdyy",
 			"name": "🐬花都影院.py 有🔞[成人]",
 			"type": 3,
-			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/花都影院.py"
+			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/花都影视🔞.py"
 		},
         {
 			"key": "ad",
@@ -169,6 +169,12 @@
 			"name": "🐬黑料不打烊.py｜🔞[吃瓜]",
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/黑料不打烊.py"
+		},
+                {
+			"key": "18av",
+			"name": "🐬18AV.py｜🔞[成人]",
+			"type": 3,
+			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/18AV.py"
 		},
         {
 			"key": "prsd",
