@@ -172,10 +172,17 @@
 		},
                 {
 			"key": "18av",
-			"name": "🐬18AV.py｜🔞[成人]",
+			"name": "🐬18AV.py｜[成人]",
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/18AV.py"
 		},
+                        {
+			"key": "lld",
+			"name": "🐬萝莉岛APP.py｜🔞[成人]",
+			"type": 3,
+			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/萝莉岛APP🔞.py"
+		},
+        
         {
 			"key": "prsd",
 			"name": "🐬怦然心动.py｜🔞[成人]",
