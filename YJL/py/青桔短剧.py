@@ -50,7 +50,7 @@ class _AESCBC:
 
 class Spider(BaseSpider):
     def __init__(self):
-        self.host = "https://lzlukvca.cc/home"
+        self.host = "https://lzlukvca.cc"
         self.api = self.host + "/api"
         self.name = "黄豆短剧"
         self.platform_key = ""
