@@ -1,0 +1,575 @@
+# -*- coding: utf-8 -*-
+
+import sys
+import re
+import json
+import requests
+import urllib3
+import base64
+import hashlib
+import time
+from urllib.parse import quote, unquote, parse_qs
+
+urllib3.disable_warnings()
+sys.path.append('..')
+from base.spider import Spider
+
+try:
+    from PIL import Image as _PIL_Image
+    import io as _io
+    _PIL_OK = True
+except:
+    _PIL_OK = False
+
+# ============================================================
+# AES-128-CBC decryption (multiple fallback methods)
+# ============================================================
+
+_AES_OK = False
+try:
+    from Crypto.Cipher import AES as _AES
+    from Crypto.Util.Padding import unpad as _unpad
+    _AES_OK = 'pycrypto'
+except:
+    try:
+        from Cryptodome.Cipher import AES as _AES
+        from Cryptodome.Util.Padding import unpad as _unpad
+        _AES_OK = 'pycrypto'
+    except:
+        pass
+
+if not _AES_OK:
+    try:
+        from cryptography.hazmat.primitives.ciphers import Cipher as _Cipher, algorithms as _algs, modes as _modes
+        from cryptography.hazmat.primitives import padding as _padding
+        _AES_OK = 'cryptography'
+    except:
+        pass
+
+if not _AES_OK:
+    try:
+        import ctypes
+        import ctypes.util
+        _libcrypto = None
+        for _lib_name in ['libcrypto.so', 'libcrypto.so.3', 'libcrypto.so.1.1', 'libcrypto.so.10',
+                          'libssl.so', 'libssl.so.3', 'libssl.so.1.1']:
+            try:
+                _libcrypto = ctypes.CDLL(_lib_name)
+                break
+            except:
+                pass
+        if not _libcrypto:
+            _found = ctypes.util.find_library('crypto')
+            if _found:
+                _libcrypto = ctypes.CDLL(_found)
+        if _libcrypto:
+            _libcrypto.EVP_CIPHER_CTX_new.restype = ctypes.c_void_p
+            _libcrypto.EVP_CIPHER_CTX_free.argtypes = [ctypes.c_void_p]
+            _libcrypto.EVP_aes_128_cbc.restype = ctypes.c_void_p
+            _AES_OK = 'ctypes'
+    except:
+        _libcrypto = None
+
+# Pure Python AES-128 implementation (FIPS-197)
+_SBOX = [
+    0x63,0x7c,0x77,0x7b,0xf2,0x6b,0x6f,0xc5,0x30,0x01,0x67,0x2b,0xfe,0xd7,0xab,0x76,
+    0xca,0x82,0xc9,0x7d,0xfa,0x59,0x47,0xf0,0xad,0xd4,0xa2,0xaf,0x9c,0xa4,0x72,0xc0,
+    0xb7,0xfd,0x93,0x26,0x36,0x3f,0xf7,0xcc,0x34,0xa5,0xe5,0xf1,0x71,0xd8,0x31,0x15,
+    0x04,0xc7,0x23,0xc3,0x18,0x96,0x05,0x9a,0x07,0x12,0x80,0xe2,0xeb,0x27,0xb2,0x75,
+    0x09,0x83,0x2c,0x1a,0x1b,0x6e,0x5a,0xa0,0x52,0x3b,0xd6,0xb3,0x29,0xe3,0x2f,0x84,
+    0x53,0xd1,0x00,0xed,0x20,0xfc,0xb1,0x5b,0x6a,0xcb,0xbe,0x39,0x4a,0x4c,0x58,0xcf,
+    0xd0,0xef,0xaa,0xfb,0x43,0x4d,0x33,0x85,0x45,0xf9,0x02,0x7f,0x50,0x3c,0x9f,0xa8,
+    0x51,0xa3,0x40,0x8f,0x92,0x9d,0x38,0xf5,0xbc,0xb6,0xda,0x21,0x10,0xff,0xf3,0xd2,
+    0xcd,0x0c,0x13,0xec,0x5f,0x97,0x44,0x17,0xc4,0xa7,0x7e,0x3d,0x64,0x5d,0x19,0x73,
+    0x60,0x81,0x4f,0xdc,0x22,0x2a,0x90,0x88,0x46,0xee,0xb8,0x14,0xde,0x5e,0x0b,0xdb,
+    0xe0,0x32,0x3a,0x0a,0x49,0x06,0x24,0x5c,0xc2,0xd3,0xac,0x62,0x91,0x95,0xe4,0x79,
+    0xe7,0xc8,0x37,0x6d,0x8d,0xd5,0x4e,0xa9,0x6c,0x56,0xf4,0xea,0x65,0x7a,0xae,0x08,
+    0xba,0x78,0x25,0x2e,0x1c,0xa6,0xb4,0xc6,0xe8,0xdd,0x74,0x1f,0x4b,0xbd,0x8b,0x8a,
+    0x70,0x3e,0xb5,0x66,0x48,0x03,0xf6,0x0e,0x61,0x35,0x57,0xb9,0x86,0xc1,0x1d,0x9e,
+    0xe1,0xf8,0x98,0x11,0x69,0xd9,0x8e,0x94,0x9b,0x1e,0x87,0xe9,0xce,0x55,0x28,0xdf,
+    0x8c,0xa1,0x89,0x0d,0xbf,0xe6,0x42,0x68,0x41,0x99,0x2d,0x0f,0xb0,0x54,0xbb,0x16,
+]
+
+_INV_SBOX = [
+    0x52,0x09,0x6a,0xd5,0x30,0x36,0xa5,0x38,0xbf,0x40,0xa3,0x9e,0x81,0xf3,0xd7,0xfb,
+    0x7c,0xe3,0x39,0x82,0x9b,0x2f,0xff,0x87,0x34,0x8e,0x43,0x44,0xc4,0xde,0xe9,0xcb,
+    0x54,0x7b,0x94,0x32,0xa6,0xc2,0x23,0x3d,0xee,0x4c,0x95,0x0b,0x42,0xfa,0xc3,0x4e,
+    0x08,0x2e,0xa1,0x66,0x28,0xd9,0x24,0xb2,0x76,0x5b,0xa2,0x49,0x6d,0x8b,0xd1,0x25,
+    0x72,0xf8,0xf6,0x64,0x86,0x68,0x98,0x16,0xd4,0xa4,0x5c,0xcc,0x5d,0x65,0xb6,0x92,
+    0x6c,0x70,0x48,0x50,0xfd,0xed,0xb9,0xda,0x5e,0x15,0x46,0x57,0xa7,0x8d,0x9d,0x84,
+    0x90,0xd8,0xab,0x00,0x8c,0xbc,0xd3,0x0a,0xf7,0xe4,0x58,0x05,0xb8,0xb3,0x45,0x06,
+    0xd0,0x2c,0x1e,0x8f,0xca,0x3f,0x0f,0x02,0xc1,0xaf,0xbd,0x03,0x01,0x13,0x8a,0x6b,
+    0x3a,0x91,0x11,0x41,0x4f,0x67,0xdc,0xea,0x97,0xf2,0xcf,0xce,0xf0,0xb4,0xe6,0x73,
+    0x96,0xac,0x74,0x22,0xe7,0xad,0x35,0x85,0xe2,0xf9,0x37,0xe8,0x1c,0x75,0xdf,0x6e,
+    0x47,0xf1,0x1a,0x71,0x1d,0x29,0xc5,0x89,0x6f,0xb7,0x62,0x0e,0xaa,0x18,0xbe,0x1b,
+    0xfc,0x56,0x3e,0x4b,0xc6,0xd2,0x79,0x20,0x9a,0xdb,0xc0,0xfe,0x78,0xcd,0x5a,0xf4,
+    0x1f,0xdd,0xa8,0x33,0x88,0x07,0xc7,0x31,0xb1,0x12,0x10,0x59,0x27,0x80,0xec,0x5f,
+    0x60,0x51,0x7f,0xa9,0x19,0xb5,0x4a,0x0d,0x2d,0xe5,0x7a,0x9f,0x93,0xc9,0x9c,0xef,
+    0xa0,0xe0,0x3b,0x4d,0xae,0x2a,0xf5,0xb0,0xc8,0xeb,0xbb,0x3c,0x83,0x53,0x99,0x61,
+    0x17,0x2b,0x04,0x7e,0xba,0x77,0xd6,0x26,0xe1,0x69,0x14,0x63,0x55,0x21,0x0c,0x7d,
+]
+
+_RCON = [0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36]
+
+def _xtime(a):
+    return (((a << 1) ^ 0x1b) & 0xff) if (a & 0x80) else (a << 1)
+
+def _mul(a, b):
+    r = 0
+    for _ in range(8):
+        if b & 1:
+            r ^= a
+        a = _xtime(a)
+        b >>= 1
+    return r
+
+def _key_expansion(key):
+    w = list(key)
+    for i in range(4, 44):
+        t = w[(i-1)*4:(i-1)*4+4]
+        if i % 4 == 0:
+            t = [t[1], t[2], t[3], t[0]]
+            t = [_SBOX[b] for b in t]
+            t[0] ^= _RCON[i//4 - 1]
+        for j in range(4):
+            w.append(w[(i-4)*4+j] ^ t[j])
+    return [w[i*4:i*4+4] for i in range(44)]
+
+def _inv_sub_bytes(s):
+    for i in range(16):
+        s[i] = _INV_SBOX[s[i]]
+
+def _inv_shift_rows(s):
+    s[1],s[5],s[9],s[13] = s[13],s[1],s[5],s[9]
+    s[2],s[6],s[10],s[14] = s[10],s[14],s[2],s[6]
+    s[3],s[7],s[11],s[15] = s[7],s[11],s[15],s[3]
+
+def _inv_mix_columns(s):
+    for c in range(4):
+        a = s[c*4:c*4+4]
+        s[c*4]   = _mul(a[0],14) ^ _mul(a[1],11) ^ _mul(a[2],13) ^ _mul(a[3],9)
+        s[c*4+1] = _mul(a[0],9)  ^ _mul(a[1],14) ^ _mul(a[2],11) ^ _mul(a[3],13)
+        s[c*4+2] = _mul(a[0],13) ^ _mul(a[1],9)  ^ _mul(a[2],14) ^ _mul(a[3],11)
+        s[c*4+3] = _mul(a[0],11) ^ _mul(a[1],13) ^ _mul(a[2],9)  ^ _mul(a[3],14)
+
+def _add_round_key(s, rk):
+    for i in range(16):
+        s[i] ^= rk[i]
+
+def _decrypt_block(block, round_keys):
+    s = list(block)
+    _add_round_key(s, round_keys[40:44][0] + round_keys[40:44][1] + round_keys[40:44][2] + round_keys[40:44][3])
+    for r in range(9, 0, -1):
+        _inv_shift_rows(s)
+        _inv_sub_bytes(s)
+        rk = round_keys[r*4:(r+1)*4]
+        _add_round_key(s, rk[0] + rk[1] + rk[2] + rk[3])
+        _inv_mix_columns(s)
+    _inv_shift_rows(s)
+    _inv_sub_bytes(s)
+    rk = round_keys[0:4]
+    _add_round_key(s, rk[0] + rk[1] + rk[2] + rk[3])
+    return bytes(s)
+
+def _pure_aes_cbc_decrypt(key, iv, ciphertext):
+    round_keys = _key_expansion(key)
+    plaintext = b''
+    prev = iv
+    for i in range(0, len(ciphertext), 16):
+        block = ciphertext[i:i+16]
+        dec = _decrypt_block(block, round_keys)
+        pt = bytes(a ^ b for a, b in zip(dec, prev))
+        plaintext += pt
+        prev = block
+    if plaintext and plaintext[-1] < 16:
+        pad_len = plaintext[-1]
+        if pad_len > 0 and all(b == pad_len for b in plaintext[-pad_len:]):
+            plaintext = plaintext[:-pad_len]
+    return plaintext
+
+def _aes_decrypt(key_bytes, iv_bytes, data_bytes):
+    if _AES_OK == 'pycrypto':
+        try:
+            c = _AES.new(key_bytes, _AES.MODE_CBC, iv_bytes)
+            d = c.decrypt(data_bytes)
+            return _unpad(d, _AES.block_size)
+        except:
+            pass
+    if _AES_OK == 'cryptography':
+        try:
+            c = _Cipher(_algs.AES(key_bytes), _modes.CBC(iv_bytes))
+            d = c.decryptor()
+            pt = d.update(data_bytes) + d.finalize()
+            unpadder = _padding.PKCS7(128).unpadder()
+            return unpadder.update(pt) + unpadder.finalize()
+        except:
+            pass
+    if _AES_OK == 'ctypes':
+        try:
+            ctx = _libcrypto.EVP_CIPHER_CTX_new()
+            if ctx:
+                _libcrypto.EVP_DecryptInit_ex(ctx, _libcrypto.EVP_aes_128_cbc(), None,
+                    ctypes.c_char_p(key_bytes), ctypes.c_char_p(iv_bytes))
+                _libcrypto.EVP_CIPHER_CTX_set_padding(ctx, 0)
+                out = ctypes.create_string_buffer(len(data_bytes) + 32)
+                out_len = ctypes.c_int(0)
+                _libcrypto.EVP_DecryptUpdate(ctx, out, ctypes.byref(out_len),
+                    ctypes.c_char_p(data_bytes), len(data_bytes))
+                total = out_len.value
+                final_out = ctypes.create_string_buffer(32)
+                final_len = ctypes.c_int(0)
+                _libcrypto.EVP_DecryptFinal_ex(ctx, final_out, ctypes.byref(final_len))
+                total += final_len.value
+                _libcrypto.EVP_CIPHER_CTX_free(ctx)
+                pt = out.raw[:total]
+                if pt and pt[-1] < 16:
+                    pad_len = pt[-1]
+                    if all(b == pad_len for b in pt[-pad_len:]):
+                        pt = pt[:-pad_len]
+                return pt
+        except:
+            pass
+    return _pure_aes_cbc_decrypt(key_bytes, iv_bytes, data_bytes)
+
+
+class Spider(Spider):
+    session = requests.Session()
+    host = 'https://accfanan.x18c87so.work'
+    token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2NTgxMjQ2NyIsImlhdCI6MTc4NjY0NjkwOCwibmJmIjoxNzg2NjY0OTIyLCJleHAiOjE5NDQzNDQ5MjJ9.7poZoAttovGH_UnkM0ZKYVjExOVGc8Uh5U62TVVQNuE'
+    device_id = 'h5_7c768c18bd97473c9f9d23b25c21f'
+    img_domain = 'https://lv1fh7cuoy78.iumigc.com/'
+    UA = 'Mozilla/5.0 (Linux; Android 12; SM-G9750 Build/SP1A.210812.016; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/89.0.4389.72 Mobile Safari/537.36'
+
+    cat_map = {
+        '1': '4',
+        '2': '5',
+        '3': '2',
+        '4': '23',
+        '5': '24',
+    }
+
+    filters_data = {
+        '3': [
+            {'key': 'classifyId', 'name': '分类', 'value': [
+                {'n': '全部', 'v': ''},
+                {'n': '同人', 'v': '47'},
+                {'n': '国漫', 'v': '50'},
+                {'n': '3D', 'v': '49'},
+                {'n': 'MMD', 'v': '48'},
+                {'n': '原神', 'v': '55'},
+                {'n': '崩坏3', 'v': '56'},
+                {'n': '番剧', 'v': '51'},
+            ]},
+        ],
+        '4': [
+            {'key': 'classifyId', 'name': '分类', 'value': [
+                {'n': '全部', 'v': ''},
+                {'n': '热播', 'v': '53'},
+                {'n': '乱伦', 'v': '27'},
+                {'n': '国产', 'v': '28'},
+                {'n': '网黄', 'v': '30'},
+                {'n': '萝莉', 'v': '52'},
+                {'n': 'AV', 'v': '57'},
+                {'n': '传媒', 'v': '54'},
+                {'n': '重口', 'v': '29'},
+            ]},
+        ],
+    }
+
+    def getName(self): return "AcFanH5"
+    def isVideoFormat(self, url): return bool(url and ('.m3u8' in url or '.mp4' in url))
+    def manualVideoCheck(self): return False
+    def destroy(self): pass
+
+    def init(self, extend=""):
+        self.session.verify = False
+
+    def _hdr(self):
+        t = str(int(time.time() * 1000))
+        s = hashlib.md5(t[3:8].encode()).hexdigest()
+        sid = hashlib.md5(str(int(time.time() * 1000)).encode()).hexdigest()[:16]
+        return {
+            'User-Agent': self.UA,
+            'Accept': 'application/json, text/plain, */*',
+            'Referer': self.host + '/',
+            'Origin': self.host,
+            'device': 'Android',
+            'appVersion': '1.9.6',
+            'User-Mark': 'xhp',
+            'deviceId': self.device_id,
+            'aut': self.token,
+            't': t,
+            's': s,
+            'sid': sid,
+        }
+
+    def _dec(self, enc, decrypt_token=None):
+        if not enc:
+            return None
+        tk = decrypt_token or self.token
+        try:
+            k = tk[2:18].encode('utf-8')
+            raw = base64.b64decode(enc)
+            d = _aes_decrypt(k, k, raw)
+            d = d.decode('utf-8')
+            return json.loads(d) if d and d[0] in '[{' else d
+        except:
+            return None
+
+    def _api(self, path, params=None):
+        for _ in range(3):
+            h = self._hdr()
+            p = dict(params or {})
+            p['_t'] = h['t']
+            url = self.host + '/api' + path
+            try:
+                r = self.session.get(url, params=p, headers=h, timeout=15, verify=False, allow_redirects=False)
+                if not r.text:
+                    continue
+                new_token = r.headers.get('refresh-authorization', '') or r.headers.get('Refresh-Authorization', '')
+                if new_token:
+                    self.token = new_token
+                j = r.json()
+                if not isinstance(j, dict):
+                    return j
+                code = j.get('code', 0)
+                if code == 301:
+                    if new_token:
+                        continue
+                    return None
+                if code != 200:
+                    return None
+                if j.get('encData'):
+                    d = self._dec(j['encData'])
+                    return d if d is not None else None
+                return j.get('data') if 'data' in j else j
+            except:
+                continue
+        return None
+
+    def proxy_img(self, url):
+        if not url or '127.0.0.1' in url:
+            return url
+        return 'http://127.0.0.1:9978/proxy?do=img&url=' + quote(url, safe='')
+
+    def _img(self, url, domain=None):
+        if not url:
+            return ''
+        if isinstance(url, list):
+            url = url[0] if url else ''
+        if not url:
+            return ''
+        if not url.startswith('http'):
+            d = domain or self.img_domain
+            if not d.endswith('/'):
+                d += '/'
+            url = d + url.lstrip('/')
+        try:
+            r = self.session.get(url, timeout=15, verify=False, headers={'User-Agent': self.UA})
+            data = bytearray(r.content)
+            key = b'2020-zq3-888'
+            n = min(100, len(data))
+            for i in range(n):
+                data[i] ^= key[i % len(key)]
+            if _PIL_OK:
+                try:
+                    img = _PIL_Image.open(_io.BytesIO(bytes(data)))
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    img.thumbnail((200, 300))
+                    buf = _io.BytesIO()
+                    img.save(buf, format='JPEG', quality=50)
+                    return 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode('utf-8')
+                except:
+                    pass
+            if data[:4] == b'\x89PNG':
+                ct = 'image/png'
+            elif data[:2] == b'\xff\xd8':
+                ct = 'image/jpeg'
+            elif data[:4] == b'GIF8':
+                ct = 'image/gif'
+            elif data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+                ct = 'image/webp'
+            else:
+                ct = 'image/jpeg'
+            return 'data:' + ct + ';base64,' + base64.b64encode(bytes(data)).decode('utf-8')
+        except:
+            return ''
+
+    def _items(self, data):
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            for k in ('data', 'list', 'videoList', 'records'):
+                v = data.get(k)
+                if isinstance(v, list):
+                    return v
+        return []
+
+    def _domain(self, data):
+        if isinstance(data, dict):
+            return data.get('domain', '')
+        return ''
+
+    def homeContent(self, filter):
+        classes = [
+            {'type_id': '1', 'type_name': '精选'},
+            {'type_id': '2', 'type_name': '漫画'},
+            {'type_id': '3', 'type_name': '动漫'},
+            {'type_id': '4', 'type_name': '视频'},
+            {'type_id': '5', 'type_name': '里番'},
+        ]
+        videos = []
+        try:
+            data = self._api('/video/getByClassify', {'page': 1, 'pageSize': 20, 'classifyId': 4, 'sortType': 0, 'restricted': 0})
+            videos = self._parse_list(data)
+        except:
+            pass
+        return {'class': classes, 'filters': self.filters_data, 'list': videos, 'type': '影视'}
+
+    def homeVideoContent(self):
+        try:
+            data = self._api('/video/getByClassify', {'page': 1, 'pageSize': 20, 'classifyId': 4, 'sortType': 0, 'restricted': 0})
+            return {'list': self._parse_list(data)}
+        except:
+            return {'list': []}
+
+    def categoryContent(self, tid, pg, filter, extend):
+        page = int(pg) if pg else 1
+        if isinstance(extend, str):
+            try:
+                extend = json.loads(extend)
+            except:
+                extend = {}
+        if not extend:
+            extend = {}
+        cid = extend.get('classifyId', '')
+        if not cid:
+            cid = self.cat_map.get(str(tid), '')
+        params = {'page': page, 'pageSize': 20, 'sortType': 0, 'restricted': 0, 'classifyId': cid}
+        data = self._api('/video/getByClassify', params)
+        items = self._parse_list(data)
+        pc = page + 1 if items else 1
+        return {'page': page, 'pagecount': pc, 'limit': 20, 'total': pc * 20, 'list': items}
+
+    def detailContent(self, ids):
+        vid = str(ids[0] if isinstance(ids, list) else ids)
+        ps = vid.split('@@@')
+        rid = ps[0] if len(ps) > 0 else vid
+        name = unquote(ps[2]) if len(ps) > 2 else rid
+        pic = unquote(ps[3]) if len(ps) > 3 else ''
+        data = self._api('/video/getVideoById', {'videoId': rid})
+        vname, vpic, vcontent, video_url, auth_key = name, pic, '', '', ''
+        domain = ''
+        cdn_list = []
+        if isinstance(data, dict):
+            domain = data.get('domain', '')
+            vname = data.get('title') or vname
+            vpic = data.get('coverImg') or vpic
+            if isinstance(vpic, list):
+                vpic = vpic[0] if vpic else vpic
+            vcontent = data.get('description') or data.get('synopsis') or ''
+            video_url = data.get('videoUrl') or data.get('playUrl') or ''
+            auth_key = data.get('authKey') or ''
+            cdn_list = data.get('cdnList') or []
+            tags = data.get('tagTitles') or []
+            if tags:
+                vcontent = '标签: ' + ' '.join(tags) + ('\n' + vcontent if vcontent else '')
+        play_from = 'AcFanH5'
+        play_url = ''
+        if video_url:
+            play_url = '播放$' + self.host + '/api/m3u8/h5/decode?path=' + quote(video_url, safe='')
+        vod = {
+            'vod_id': vid,
+            'vod_name': vname,
+            'vod_pic': self._img(vpic, domain),
+            'vod_content': vcontent,
+            'vod_play_from': play_from,
+            'vod_play_url': play_url,
+        }
+        return {'list': [vod]}
+
+    def searchContent(self, key, quick, pg="1"):
+        page = int(pg) if pg else 1
+        data = self._api('/search/keyWordV2', {'searchWord': key, 'page': page, 'pageSize': 20})
+        items = []
+        domain = ''
+        if isinstance(data, dict):
+            domain = data.get('domain', '')
+            items = data.get('videoList') or []
+            if isinstance(items, dict):
+                items = items.get('data') or []
+        elif isinstance(data, list):
+            items = data
+        pc = page + 1 if items else 1
+        return {'list': self._parse_list({'domain': domain, 'data': items}), 'page': page, 'pagecount': pc, 'limit': 20, 'total': pc * 20}
+
+    def playerContent(self, flag, id, vipFlags=None):
+        url = id or ''
+        hdr = {'User-Agent': self.UA, 'Referer': self.host + '/', 'Origin': self.host}
+        if self.isVideoFormat(url):
+            return {'parse': 0, 'url': url, 'header': hdr}
+        if url.startswith(self.host + '/api/m3u8/'):
+            return {'parse': 0, 'url': url, 'header': hdr}
+        return {'parse': 1, 'url': url, 'header': hdr}
+
+    def localProxy(self, param):
+        url = ''
+        if isinstance(param, dict):
+            url = param.get('url', '')
+        elif isinstance(param, str):
+            qs = parse_qs(param)
+            url = qs.get('url', [''])[0]
+        if not url:
+            return [200, 'text/plain', b'']
+        try:
+            r = requests.get(url, timeout=10, verify=False, headers={'User-Agent': self.UA})
+            data = bytearray(r.content)
+            key = b'2020-zq3-888'
+            n = min(100, len(data))
+            for i in range(n):
+                data[i] ^= key[i % len(key)]
+            if data[:4] == b'\x89PNG':
+                ct = 'image/png'
+            elif data[:2] == b'\xff\xd8':
+                ct = 'image/jpeg'
+            elif data[:4] == b'GIF8':
+                ct = 'image/gif'
+            elif data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+                ct = 'image/webp'
+            else:
+                ct = 'image/jpeg'
+            return [200, ct, bytes(data)]
+        except:
+            return [200, 'text/plain', b'']
+
+    def _parse_list(self, data):
+        domain = self._domain(data) if isinstance(data, dict) else ''
+        items = self._items(data)
+        res = []
+        seen = set()
+        for item in (items or []):
+            try:
+                if not isinstance(item, dict):
+                    continue
+                vid = str(item.get('videoId') or item.get('id') or '')
+                if not vid or vid in seen:
+                    continue
+                seen.add(vid)
+                name = str(item.get('title') or vid)
+                pic = item.get('coverImg') or ''
+                if isinstance(pic, list):
+                    pic = pic[0] if pic else ''
+                dur = str(item.get('playTime') or '')
+                if dur and dur.isdigit():
+                    dur = str(int(dur) // 60) + ':' + str(int(dur) % 60).zfill(2)
+                sid = vid + '@@@' + '' + '@@@' + quote(str(name)) + '@@@' + quote(str(pic) if isinstance(pic, str) else '')
+                res.append({
+                    'vod_id': sid,
+                    'vod_name': name,
+                    'vod_pic': self._img(pic, domain),
+                    'vod_remarks': dur if dur else '',
+                })
+            except:
+                continue
+        return res
