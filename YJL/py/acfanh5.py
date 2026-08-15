@@ -8,18 +8,11 @@ import urllib3
 import base64
 import hashlib
 import time
-from urllib.parse import quote, unquote, parse_qs
+from urllib.parse import quote, unquote
 
 urllib3.disable_warnings()
 sys.path.append('..')
 from base.spider import Spider
-
-try:
-    from PIL import Image as _PIL_Image
-    import io as _io
-    _PIL_OK = True
-except:
-    _PIL_OK = False
 
 # ============================================================
 # AES-128-CBC decryption (multiple fallback methods)
@@ -237,41 +230,164 @@ class Spider(Spider):
     host = 'https://accfanan.x18c87so.work'
     token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2NTgxMjQ2NyIsImlhdCI6MTc4NjY0NjkwOCwibmJmIjoxNzg2NjY0OTIyLCJleHAiOjE5NDQzNDQ5MjJ9.7poZoAttovGH_UnkM0ZKYVjExOVGc8Uh5U62TVVQNuE'
     device_id = 'h5_7c768c18bd97473c9f9d23b25c21f'
-    img_domain = 'https://lv1fh7cuoy78.iumigc.com/'
+    img_domain = 'https://wiuuh1425js3.iumigc.com/'
     UA = 'Mozilla/5.0 (Linux; Android 12; SM-G9750 Build/SP1A.210812.016; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/89.0.4389.72 Mobile Safari/537.36'
 
     cat_map = {
-        '1': '4',
-        '2': '5',
-        '3': '2',
-        '4': '23',
-        '5': '24',
+        'jx': '4',
+        'dm': '2',
+        'lifan': '24',
+        'rebao': '53',
+        'luanlun': '27',
+        'guochan': '28',
+        'wanghuang': '30',
+        'luoli': '52',
+        'av': '57',
+        'chuanmei': '58',
+        'zhongkou': '59',
     }
 
     filters_data = {
-        '3': [
-            {'key': 'classifyId', 'name': '分类', 'value': [
+        'dm': [
+            {'key': 'videoTag', 'name': '分类', 'value': [
                 {'n': '全部', 'v': ''},
-                {'n': '同人', 'v': '47'},
-                {'n': '国漫', 'v': '50'},
-                {'n': '3D', 'v': '49'},
-                {'n': 'MMD', 'v': '48'},
-                {'n': '原神', 'v': '55'},
-                {'n': '崩坏3', 'v': '56'},
-                {'n': '番剧', 'v': '51'},
+                {'n': '同人', 'v': '同人'},
+                {'n': '国漫', 'v': '国漫'},
+                {'n': '3D', 'v': '3D'},
+                {'n': 'MMD', 'v': 'MMD'},
+                {'n': '原神', 'v': '原神'},
+                {'n': '崩坏3', 'v': '崩坏3'},
+                {'n': '番剧', 'v': '番剧'},
             ]},
         ],
-        '4': [
-            {'key': 'classifyId', 'name': '分类', 'value': [
+        'rebao': [
+            {'key': 'videoTag', 'name': '分类', 'value': [
                 {'n': '全部', 'v': ''},
-                {'n': '热播', 'v': '53'},
-                {'n': '乱伦', 'v': '27'},
-                {'n': '国产', 'v': '28'},
-                {'n': '网黄', 'v': '30'},
-                {'n': '萝莉', 'v': '52'},
-                {'n': 'AV', 'v': '57'},
-                {'n': '传媒', 'v': '54'},
-                {'n': '重口', 'v': '29'},
+                {'n': '熟女肥逼', 'v': '熟女肥逼'},
+                {'n': '人妖伪娘', 'v': '人妖伪娘'},
+                {'n': '美胸巨乳', 'v': '美胸巨乳'},
+                {'n': '探花偷拍', 'v': '探花偷拍'},
+                {'n': '少女萝莉', 'v': '少女萝莉'},
+                {'n': '强奸迷奸', 'v': '强奸迷奸'},
+                {'n': '多人群p', 'v': '多人群p'},
+                {'n': '调教SM', 'v': '调教SM'},
+                {'n': '泄露流出', 'v': '泄露流出'},
+                {'n': '媚黑骚逼', 'v': '媚黑骚逼'},
+                {'n': '孕妇做爱', 'v': '孕妇做爱'},
+                {'n': '校园霸凌', 'v': '校园霸凌'},
+            ]},
+        ],
+        'luanlun': [
+            {'key': 'videoTag', 'name': '分类', 'value': [
+                {'n': '全部', 'v': ''},
+                {'n': '父女', 'v': '父女'},
+                {'n': '母子', 'v': '母子'},
+                {'n': '兄妹', 'v': '兄妹'},
+                {'n': '姐弟', 'v': '姐弟'},
+                {'n': '岳母', 'v': '岳母'},
+                {'n': '嫂子', 'v': '嫂子'},
+                {'n': '侄女', 'v': '侄女'},
+                {'n': '师生', 'v': '师生'},
+                {'n': '小姨子', 'v': '小姨子'},
+                {'n': '小马拉大车', 'v': '小马拉大车'},
+            ]},
+        ],
+        'guochan': [
+            {'key': 'videoTag', 'name': '分类', 'value': [
+                {'n': '全部', 'v': ''},
+                {'n': '情侣自拍', 'v': '情侣自拍'},
+                {'n': '三级片', 'v': '三级片'},
+                {'n': '户外露出', 'v': '户外露出'},
+                {'n': '颜值女神', 'v': '颜值女神'},
+                {'n': '反差婊', 'v': '反差婊'},
+                {'n': '明星换脸', 'v': '明星换脸'},
+                {'n': '推油按摩', 'v': '推油按摩'},
+                {'n': '网红博主', 'v': '网红博主'},
+                {'n': '偷情出轨', 'v': '偷情出轨'},
+                {'n': '主播大秀', 'v': '主播大秀'},
+                {'n': '真实换妻', 'v': '真实换妻'},
+                {'n': '合集盘点', 'v': '合集盘点'},
+            ]},
+        ],
+        'wanghuang': [
+            {'key': 'videoTag', 'name': '分类', 'value': [
+                {'n': '全部', 'v': ''},
+                {'n': '白桃少女', 'v': '白桃少女'},
+                {'n': '台北娜娜', 'v': '台北娜娜'},
+                {'n': '柚子猫', 'v': '柚子猫'},
+                {'n': '桥本香菜', 'v': '桥本香菜'},
+                {'n': '饼干姐姐', 'v': '饼干姐姐'},
+                {'n': '小欣奈', 'v': '小欣奈'},
+                {'n': '御梦子', 'v': '御梦子'},
+                {'n': '捅主任', 'v': '捅主任'},
+                {'n': '黑椒盖饭', 'v': '黑椒盖饭'},
+                {'n': '冉冉学姐', 'v': '冉冉学姐'},
+                {'n': '鸡教练', 'v': '鸡教练'},
+                {'n': '唐伯虎', 'v': '唐伯虎'},
+                {'n': '咪妮', 'v': '咪妮'},
+                {'n': '玩偶姐姐', 'v': '玩偶姐姐'},
+                {'n': '情深叉喔', 'v': '情深叉喔'},
+                {'n': '水冰月', 'v': '水冰月'},
+                {'n': '米胡桃', 'v': '米胡桃'},
+                {'n': '白菜妹妹', 'v': '白菜妹妹'},
+                {'n': '二代cc', 'v': '二代cc'},
+            ]},
+        ],
+        'luoli': [
+            {'key': 'videoTag', 'name': '分类', 'value': [
+                {'n': '全部', 'v': ''},
+                {'n': '护士', 'v': '护士'},
+                {'n': '白虎嫩妹', 'v': '白虎嫩妹'},
+                {'n': '女仆', 'v': '女仆'},
+                {'n': 'cosplay', 'v': 'cosplay'},
+                {'n': '洛丽塔', 'v': '洛丽塔'},
+                {'n': 'JK学生', 'v': 'JK学生'},
+                {'n': '丝袜美腿', 'v': '丝袜美腿'},
+                {'n': '激情自慰', 'v': '激情自慰'},
+                {'n': '空姐', 'v': '空姐'},
+                {'n': '泳装', 'v': '泳装'},
+                {'n': '职场OL', 'v': '职场OL'},
+                {'n': '骚萝破处', 'v': '骚萝破处'},
+            ]},
+        ],
+        'av': [
+            {'key': 'videoTag', 'name': '分类', 'value': [
+                {'n': '全部', 'v': ''},
+                {'n': '最新AV', 'v': '最新AV'},
+                {'n': '人妻偷情', 'v': '人妻偷情'},
+                {'n': '暗黑迷奸', 'v': '暗黑迷奸'},
+                {'n': '日本JK', 'v': '日本JK'},
+                {'n': '无码破解', 'v': '无码破解'},
+                {'n': '中文AV', 'v': '中文AV'},
+                {'n': 'FC2', 'v': 'FC2'},
+                {'n': '重口AV', 'v': '重口AV'},
+            ]},
+        ],
+        'chuanmei': [
+            {'key': 'videoTag', 'name': '分类', 'value': [
+                {'n': '全部', 'v': ''},
+                {'n': '麻豆传媒', 'v': '麻豆传媒'},
+                {'n': 'jvid', 'v': 'jvid'},
+                {'n': '蜜桃传媒', 'v': '蜜桃传媒'},
+                {'n': '天美传媒', 'v': '天美传媒'},
+                {'n': '糖心vlog', 'v': '糖心vlog'},
+                {'n': '性视界', 'v': '性视界'},
+            ]},
+        ],
+        'zhongkou': [
+            {'key': 'videoTag', 'name': '分类', 'value': [
+                {'n': '全部', 'v': ''},
+                {'n': '屎尿', 'v': '屎尿'},
+                {'n': '四爱', 'v': '四爱'},
+                {'n': '血腥暴力', 'v': '血腥暴力'},
+                {'n': '肛交菊花', 'v': '肛交菊花'},
+                {'n': '道具', 'v': '道具'},
+                {'n': '捆绑', 'v': '捆绑'},
+                {'n': '男同真爱', 'v': '男同真爱'},
+                {'n': '虐待', 'v': '虐待'},
+                {'n': '人兽', 'v': '人兽'},
+                {'n': '踩踏虐鸡', 'v': '踩踏虐鸡'},
+                {'n': '恋物足交', 'v': '恋物足交'},
             ]},
         ],
     }
@@ -347,11 +463,6 @@ class Spider(Spider):
                 continue
         return None
 
-    def proxy_img(self, url):
-        if not url or '127.0.0.1' in url:
-            return url
-        return 'http://127.0.0.1:9978/proxy?do=img&url=' + quote(url, safe='')
-
     def _img(self, url, domain=None):
         if not url:
             return ''
@@ -365,36 +476,40 @@ class Spider(Spider):
                 d += '/'
             url = d + url.lstrip('/')
         try:
-            r = self.session.get(url, timeout=15, verify=False, headers={'User-Agent': self.UA})
-            data = bytearray(r.content)
-            key = b'2020-zq3-888'
-            n = min(100, len(data))
-            for i in range(n):
-                data[i] ^= key[i % len(key)]
-            if _PIL_OK:
-                try:
-                    img = _PIL_Image.open(_io.BytesIO(bytes(data)))
-                    if img.mode != 'RGB':
-                        img = img.convert('RGB')
-                    img.thumbnail((200, 300))
-                    buf = _io.BytesIO()
-                    img.save(buf, format='JPEG', quality=50)
-                    return 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode('utf-8')
-                except:
-                    pass
-            if data[:4] == b'\x89PNG':
-                ct = 'image/png'
-            elif data[:2] == b'\xff\xd8':
-                ct = 'image/jpeg'
-            elif data[:4] == b'GIF8':
-                ct = 'image/gif'
-            elif data[:4] == b'RIFF' and data[8:12] == b'WEBP':
-                ct = 'image/webp'
-            else:
-                ct = 'image/jpeg'
-            return 'data:' + ct + ';base64,' + base64.b64encode(bytes(data)).decode('utf-8')
+            b = self.getProxyUrl()
+            if '?' not in b:
+                b += '?do=py'
+            return b + '&type=img&url=' + quote(url, safe='')
         except:
-            return ''
+            return url
+
+    def localProxy(self, param):
+        try:
+            if not isinstance(param, dict):
+                param = {}
+            pt = param.get('type') or param.get('do') or ''
+            u = param.get('url', '')
+            if isinstance(u, list):
+                u = u[0]
+            u = unquote(u) if u else ''
+            if pt == 'img' and u:
+                r = self.session.get(u, headers={'User-Agent': self.UA, 'Referer': self.host + '/'}, timeout=15, verify=False)
+                data = bytearray(r.content)
+                key = b'2020-zq3-888'
+                for i in range(min(100, len(data))):
+                    data[i] ^= key[i % len(key)]
+                if data[:4] == b'\x89PNG':
+                    ct = 'image/png'
+                elif data[:3] == b'GIF':
+                    ct = 'image/gif'
+                elif data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+                    ct = 'image/webp'
+                else:
+                    ct = 'image/jpeg'
+                return [200, ct, bytes(data)]
+            return [404, 'text/plain', b'nf']
+        except:
+            return [500, 'text/plain', b'err']
 
     def _items(self, data):
         if isinstance(data, list):
@@ -413,11 +528,17 @@ class Spider(Spider):
 
     def homeContent(self, filter):
         classes = [
-            {'type_id': '1', 'type_name': '精选'},
-            {'type_id': '2', 'type_name': '漫画'},
-            {'type_id': '3', 'type_name': '动漫'},
-            {'type_id': '4', 'type_name': '视频'},
-            {'type_id': '5', 'type_name': '里番'},
+            {'type_id': 'jx', 'type_name': '精选'},
+            {'type_id': 'dm', 'type_name': '动漫'},
+            {'type_id': 'lifan', 'type_name': '里番'},
+            {'type_id': 'rebao', 'type_name': '热播'},
+            {'type_id': 'luanlun', 'type_name': '乱伦'},
+            {'type_id': 'guochan', 'type_name': '国产'},
+            {'type_id': 'wanghuang', 'type_name': '网黄'},
+            {'type_id': 'luoli', 'type_name': '萝莉'},
+            {'type_id': 'av', 'type_name': 'AV'},
+            {'type_id': 'chuanmei', 'type_name': '传媒'},
+            {'type_id': 'zhongkou', 'type_name': '重口'},
         ]
         videos = []
         try:
@@ -446,8 +567,13 @@ class Spider(Spider):
         cid = extend.get('classifyId', '')
         if not cid:
             cid = self.cat_map.get(str(tid), '')
-        params = {'page': page, 'pageSize': 20, 'sortType': 0, 'restricted': 0, 'classifyId': cid}
-        data = self._api('/video/getByClassify', params)
+        vt = extend.get('videoTag', '')
+        if vt:
+            params = {'tagsTitle': vt, 'page': page, 'pageSize': 20, 'sortType': 0, 'restricted': 0}
+            data = self._api('/video/tagTitleList', params)
+        else:
+            params = {'page': page, 'pageSize': 20, 'sortType': 0, 'restricted': 0, 'classifyId': cid}
+            data = self._api('/video/getByClassify', params)
         items = self._parse_list(data)
         pc = page + 1 if items else 1
         return {'page': page, 'pagecount': pc, 'limit': 20, 'total': pc * 20, 'list': items}
@@ -512,36 +638,6 @@ class Spider(Spider):
         if url.startswith(self.host + '/api/m3u8/'):
             return {'parse': 0, 'url': url, 'header': hdr}
         return {'parse': 1, 'url': url, 'header': hdr}
-
-    def localProxy(self, param):
-        url = ''
-        if isinstance(param, dict):
-            url = param.get('url', '')
-        elif isinstance(param, str):
-            qs = parse_qs(param)
-            url = qs.get('url', [''])[0]
-        if not url:
-            return [200, 'text/plain', b'']
-        try:
-            r = requests.get(url, timeout=10, verify=False, headers={'User-Agent': self.UA})
-            data = bytearray(r.content)
-            key = b'2020-zq3-888'
-            n = min(100, len(data))
-            for i in range(n):
-                data[i] ^= key[i % len(key)]
-            if data[:4] == b'\x89PNG':
-                ct = 'image/png'
-            elif data[:2] == b'\xff\xd8':
-                ct = 'image/jpeg'
-            elif data[:4] == b'GIF8':
-                ct = 'image/gif'
-            elif data[:4] == b'RIFF' and data[8:12] == b'WEBP':
-                ct = 'image/webp'
-            else:
-                ct = 'image/jpeg'
-            return [200, ct, bytes(data)]
-        except:
-            return [200, 'text/plain', b'']
 
     def _parse_list(self, data):
         domain = self._domain(data) if isinstance(data, dict) else ''
