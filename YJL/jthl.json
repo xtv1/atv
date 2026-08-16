@@ -14,7 +14,7 @@
 			"key": "acfanh5",
 			"name": "🐬acFanh5 🔞[成人]",
 			"type": 3,
-			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/acfanh5.py"
+			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/acFanh5.py"
 		},
  {
 			"key": "ad",
@@ -22,6 +22,13 @@
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/艾旦影视🔞.py"
 		},
+        {"key": "狂飙短剧",      "name": "🐬狂飙短剧.py｜🔞[成人短剧]",      "type": 3,      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/狂飙短剧🔞.py"    },
+        {
+      "key": "黄果短剧",
+      "name": "🐬黄果短剧.py🔞[成人短剧]",
+      "type": 3,
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/黄果短剧.py"
+    },
            {
       "key": "51短剧",
       "name": "🐬51短剧.py 墙🔞[成人短剧]",
@@ -209,6 +216,12 @@
       "name": "🐬黑料网.py｜🔞[吃瓜]",
       "type": 3,
       "api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/黑料网.py"
+    },
+     {
+      "key": "阴阳宝鉴",
+      "name": "🐬阴阳宝鉴.py[成人]｜🔞",
+      "type": 3,
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/阴阳宝鉴🔞.py"
     },
            
                     {
@@ -671,6 +684,7 @@
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/麻豆免费在线播放.py"
 		},
+        {      "key": "有声骚麦",      "name": "🐬有声骚麦.py🔞[成人听书]",      "type": 3,      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/有声骚麦🔞.py"    },
 {"key":"1","name":"🔞🈲未成年人禁止访问，请止步！！","type":0,"api":""},
 {"key":"18","name":"🔞🈲分割线——————","type":0,"api":""},
 {"key":"12","name":"🔞分割线——————","type":0,"api":""},
