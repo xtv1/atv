@@ -3,6 +3,7 @@
 import sys
 import re
 import json
+import socket
 import requests
 import urllib3
 import base64
@@ -174,9 +175,9 @@ def _pure_aes_cbc_decrypt(key, iv, ciphertext):
         pt = bytes(a ^ b for a, b in zip(dec, prev))
         plaintext += pt
         prev = block
-    if plaintext and plaintext[-1] < 16:
+    if plaintext and 0 < plaintext[-1] <= 16:
         pad_len = plaintext[-1]
-        if pad_len > 0 and all(b == pad_len for b in plaintext[-pad_len:]):
+        if all(b == pad_len for b in plaintext[-pad_len:]):
             plaintext = plaintext[:-pad_len]
     return plaintext
 
@@ -215,7 +216,7 @@ def _aes_decrypt(key_bytes, iv_bytes, data_bytes):
                 total += final_len.value
                 _libcrypto.EVP_CIPHER_CTX_free(ctx)
                 pt = out.raw[:total]
-                if pt and pt[-1] < 16:
+                if pt and 0 < pt[-1] <= 16:
                     pad_len = pt[-1]
                     if all(b == pad_len for b in pt[-pad_len:]):
                         pt = pt[:-pad_len]
@@ -223,6 +224,75 @@ def _aes_decrypt(key_bytes, iv_bytes, data_bytes):
         except:
             pass
     return _pure_aes_cbc_decrypt(key_bytes, iv_bytes, data_bytes)
+
+
+_PIN_MAP = {}
+_PIN_INSTALLED = [False]
+
+
+def _install_pin():
+    if _PIN_INSTALLED[0]:
+        return
+    _PIN_INSTALLED[0] = True
+    _orig = socket.getaddrinfo
+
+    def _pinned(host, port, *args, **kwargs):
+        _ips = _PIN_MAP.get(host)
+        if _ips:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (ip, port)) for ip in _ips]
+        return _orig(host, port, *args, **kwargs)
+
+    socket.getaddrinfo = _pinned
+
+
+def _doh_resolve(hostname):
+    _doh_list = [
+        'https://doh.pub/dns-query',
+        'https://dns.alidns.com/resolve',
+        'https://dns.google/resolve',
+        'https://cloudflare-dns.com/dns-query',
+    ]
+    picked = []
+    for _u in _doh_list:
+        try:
+            _r = requests.get(_u, params={'name': hostname, 'type': 'A'},
+                              headers={'accept': 'application/dns-json'}, timeout=6, verify=False)
+            _j = _r.json()
+            for _a in _j.get('Answer', []):
+                if _a.get('type') == 1 and _a.get('data'):
+                    _d = _a['data']
+                    if _d and not _d.startswith('0.'):
+                        picked.append(_d)
+            if picked:
+                break
+        except Exception:
+            continue
+    return picked
+
+
+def _doh_pin_domain(hostname, fallback=None):
+    """国内 DNS 污染时,通过 DoH 获取真实 IP,并钉扎域名解析,绕过被劫持的系统 DNS。
+    仅对指定 hostname 生效,不影响其他域名解析。DoH 失败时可用 fallback IP 兜底。"""
+    try:
+        if not hostname:
+            return
+        _install_pin()
+        picked = _doh_resolve(hostname)
+        if not picked and fallback:
+            picked = list(fallback)
+        if picked:
+            _PIN_MAP[hostname] = picked
+    except Exception:
+        pass
+
+
+def _pin_url_host(url):
+    try:
+        _m = re.match(r'https?://([^/:]+)', url or '')
+        if _m:
+            _doh_pin_domain(_m.group(1))
+    except Exception:
+        pass
 
 
 class Spider(Spider):
@@ -399,6 +469,8 @@ class Spider(Spider):
 
     def init(self, extend=""):
         self.session.verify = False
+        _doh_pin_domain(self.host.split('//')[-1].split('/')[0],
+                        fallback=['108.138.7.103', '108.138.7.96', '108.138.7.85', '108.138.7.49'])
 
     def _hdr(self):
         t = str(int(time.time() * 1000))
@@ -493,6 +565,7 @@ class Spider(Spider):
                 u = u[0]
             u = unquote(u) if u else ''
             if pt == 'img' and u:
+                _pin_url_host(u)
                 r = self.session.get(u, headers={'User-Agent': self.UA, 'Referer': self.host + '/'}, timeout=15, verify=False)
                 data = bytearray(r.content)
                 key = b'2020-zq3-888'
@@ -507,6 +580,35 @@ class Spider(Spider):
                 else:
                     ct = 'image/jpeg'
                 return [200, ct, bytes(data)]
+            if pt == 'm3u8' and u:
+                _pin_url_host(u)
+                r = self.session.get(u, headers=self._hdr(), timeout=20, verify=False)
+                if r.status_code != 200:
+                    return [404, 'text/plain', b'nf']
+                body = r.text
+                b = self.getProxyUrl()
+                if '?' not in b:
+                    b += '?do=py'
+
+                def _proxy(url):
+                    return b + '&type=ts&url=' + quote(url, safe='')
+
+                body = re.sub(r'(URI=")([^"]+)(")',
+                              lambda m: m.group(1) + _proxy(m.group(2)) + m.group(3), body)
+                lines = []
+                for line in body.splitlines():
+                    s = line.strip()
+                    if s.startswith('http://') or s.startswith('https://'):
+                        line = _proxy(s)
+                    lines.append(line)
+                body = '\n'.join(lines)
+                return [200, 'application/vnd.apple.mpegurl;charset=UTF-8', body.encode('utf-8')]
+            if pt == 'ts' and u:
+                _pin_url_host(u)
+                r = self.session.get(u, headers={'User-Agent': self.UA, 'Referer': self.host + '/'}, timeout=20, verify=False)
+                if r.status_code != 200:
+                    return [404, 'text/plain', b'nf']
+                return [200, 'video/mp2t', r.content]
             return [404, 'text/plain', b'nf']
         except:
             return [500, 'text/plain', b'err']
@@ -604,7 +706,14 @@ class Spider(Spider):
         play_from = 'AcFanH5'
         play_url = ''
         if video_url:
-            play_url = '播放$' + self.host + '/api/m3u8/h5/decode?path=' + quote(video_url, safe='')
+            try:
+                b = self.getProxyUrl()
+                if '?' not in b:
+                    b += '?do=py'
+                m3u8_api = self.host + '/api/m3u8/h5/decode?path=' + quote(video_url, safe='')
+                play_url = '播放$' + b + '&type=m3u8&url=' + quote(m3u8_api, safe='')
+            except:
+                play_url = '播放$' + self.host + '/api/m3u8/h5/decode?path=' + quote(video_url, safe='')
         vod = {
             'vod_id': vid,
             'vod_name': vname,
@@ -636,6 +745,8 @@ class Spider(Spider):
         if self.isVideoFormat(url):
             return {'parse': 0, 'url': url, 'header': hdr}
         if url.startswith(self.host + '/api/m3u8/'):
+            return {'parse': 0, 'url': url, 'header': hdr}
+        if '/proxy?' in url or '/local/' in url or url.startswith('http://127.0.0.1'):
             return {'parse': 0, 'url': url, 'header': hdr}
         return {'parse': 1, 'url': url, 'header': hdr}
 
