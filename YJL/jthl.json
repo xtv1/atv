@@ -22,7 +22,10 @@
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/艾旦影视🔞.py"
 		},
-        {"key": "狂飙短剧",      "name": "🐬狂飙短剧.py｜🔞[成人短剧]",      "type": 3,      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/狂飙短剧🔞.py"    },
+        {"key": "狂飙短剧",
+         "name": "🐬狂飙短剧.py｜🔞[成人短剧]",
+          "type": 3, 
+          "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/狂飙短剧.py"    },
         {
       "key": "黄果短剧",
       "name": "🐬黄果短剧.py🔞[成人短剧]",
@@ -64,7 +67,8 @@
       "name": "🐬推特APP.py[成人]｜🔞",
       "type": 3,
       "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/推特APP🔞.py"
-    },  
+    },
+    {      "key": "笔盒",      "name": "🐬笔盒.py[成人]｜🔞",      "type": 3,      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/笔盒🔞TG @hshsjk9.py"    },  
       {
       "key": "溏心次元",
       "name": "🐬溏心次元.py(关梯)[成人]｜🔞",
@@ -119,6 +123,12 @@
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/Pandalive直播.py"
 		},
+            {
+      "key": "myfreecams直播",
+      "name": "🐬myfreecams直播.py｜🔞[成人直播]",
+      "type": 3,
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/myfreecams直播🔞TG @hshsjk9.py"
+    },
         		{
 			"key": "麻豆",
 			"name": "🐬麻豆.js｜🔞[成人]",
@@ -137,37 +147,37 @@
       "key": "007吃瓜",
       "name": "🐬007吃瓜.py｜🔞[吃瓜]",
       "type": 3,
-      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/007吃瓜🔞.py"
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/007吃瓜🔞TG @hshsjk9.py"
     },
     {
       "key": "51qg",
       "name": "🐬51吃瓜.py｜🔞[吃瓜]",
       "type": 3,
-      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/51吃瓜🔞.py"
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/51吃瓜🔞TG @hshsjk9.py"
     },
     {
       "key": "51dc",
       "name": "🐬51大赛.py｜🔞[吃瓜]",
       "type": 3,
-      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/51大赛🔞.py"
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/51大赛🔞TG @hshsjk9.py"
     },
     {
       "key": "51bl",
       "name": "🐬51爆料.py｜🔞[吃瓜]",
       "type": 3,
-      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/51爆料🔞.py"
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/51爆料🔞TG @hshsjk9.py"
     },
     {
       "key": "51vm",
       "name": "🐬51视频.py｜🔞[吃瓜]",
       "type": 3,
-      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/51视频🔞.py"
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/51视频🔞TG @hshsjk9.py"
     },
     {
       "key": "51暗网",
       "name": "🐬51暗网.py｜🔞[吃瓜]",
       "type": 3,
-      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/51暗网🔞.py"
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/51暗网🔞TG @hshsjk9.py"
     },
     {
       "key": "818hlw",
@@ -222,6 +232,12 @@
       "name": "🐬黑料网.py｜🔞[吃瓜]",
       "type": 3,
       "api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/黑料网.py"
+    },
+        {
+      "key": "草榴社区",
+      "name": "🐬草榴社区.py(关梯)[成人]｜🔞",
+      "type": 3,
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/草榴社区🔞.py"
     },
      {
       "key": "阴阳宝鉴",
@@ -295,6 +311,7 @@
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/禁片天堂.py"
 		},
+        {      "key": "one点播",      "name": "🐬one点播4K.py(关梯)[成人]｜🔞",      "type": 3,      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/one点播🔞TG @hshsjk9.py"    },
 		{
 			"key": "hgsq",
 			"name": "🐬韩国色情电影.py｜🔞[成人]",
@@ -307,6 +324,7 @@
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/神秘电影.py"
 		},
+        {      "key": "口爆大全AV",      "name": "🐬口爆大全AV.py[成人]｜🔞",      "type": 3,      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/口爆大全AV🔞TG @hshsjk9.py"    },
 		{
 			"key": "xj",
 			"name": "🐬香蕉视频.py(关梯)｜🔞[成人]",
