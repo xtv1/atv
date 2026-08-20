@@ -1,18 +1,99 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 import gzip
 import hashlib
 import hmac
 import json
 import os
+import re
+import socket
+import ssl
 import time
 import uuid
 import requests
+from urllib.parse import quote, unquote, parse_qsl, urljoin, urlparse
 
 try:
     from base.spider import Spider as BaseSpider
 except Exception:
     class BaseSpider:
         pass
+
+_DOH_SERVERS = (
+    "https://doh.pub/dns-query?name=%s&type=A",
+    "https://dns.alidns.com/resolve?name=%s&type=A",
+    "https://dns.google/resolve?name=%s&type=A",
+    "https://cloudflare-dns.com/dns-query?name=%s&type=A",
+)
+_DOH_HOSTS = {"doh.pub", "dns.alidns.com", "dns.google", "cloudflare-dns.com"}
+_FALLBACK_IPS = {"lzlukvca.cc": "104.21.12.21", "d3rorc0p4i1kyz.cloudfront.net": "52.222.206.47"}
+_IP_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
+_doh_cache = {}
+_orig_getaddrinfo = socket.getaddrinfo
+
+def _verify(host, ip, port):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(8)
+        s.connect((ip, port))
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        ss = ctx.wrap_socket(s, server_hostname=host)
+        ss.settimeout(8)
+        ss.sendall(b"GET / HTTP/1.1\r\nHost: " + host.encode() + b"\r\nConnection: close\r\nUser-Agent: Mozilla/5.0\r\n\r\n")
+        head = b""
+        while b"\r\n\r\n" not in head:
+            chunk = ss.recv(512)
+            if not chunk:
+                break
+            head += chunk
+        ss.close()
+        return head.startswith(b"HTTP/")
+    except Exception:
+        return False
+
+def _doh_resolve(host, port=443):
+    ip = _doh_cache.get(host)
+    if ip:
+        return ip
+    cands = []
+    for srv in _DOH_SERVERS:
+        try:
+            r = requests.get(srv % host, headers={"Accept": "application/dns-json"}, timeout=6, verify=False)
+            for a in r.json().get("Answer", []):
+                if a.get("type") == 1 and _IP_RE.match(a.get("data", "")):
+                    cands.append(a["data"])
+        except Exception:
+            continue
+    try:
+        for r in _orig_getaddrinfo(host, port):
+            if r[0] == socket.AF_INET and _IP_RE.match(r[4][0]):
+                cands.append(r[4][0])
+    except Exception:
+        pass
+    fb = _FALLBACK_IPS.get(host, "")
+    if fb and fb not in cands:
+        cands.append(fb)
+    seen = []
+    for c in cands:
+        if c not in seen:
+            seen.append(c)
+    for c in seen:
+        if _verify(host, c, port):
+            _doh_cache[host] = c
+            return c
+    return ""
+
+def _pinned_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    if isinstance(host, str) and host not in _DOH_HOSTS:
+        pnum = int(port) if isinstance(port, int) else 443
+        ip = _doh_resolve(host, pnum)
+        if ip:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, port))]
+    return _orig_getaddrinfo(host, port, family, type, proto, flags)
+
+socket.getaddrinfo = _pinned_getaddrinfo
 
 class _AESCBC:
     @staticmethod
@@ -50,16 +131,17 @@ class _AESCBC:
 
 class Spider(BaseSpider):
     def __init__(self):
-        self.host = "https://lzlukvca.cc" 
+        self.host = "https://lzlukvca.cc"
         self.api = self.host + "/api"
         self.name = "黄豆短剧"
-        self.platform_key = ""
+        self.platform_key = "7961beb44246e3012ce228d6b5ced05a"
         self.version = "2.0.0"
         self.device_type = "web"
         self.session_id = uuid.uuid4().hex
         self.device_id = self.session_id
         self.token = ""
         self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Accept": "*/*", "Origin": self.host, "Referer": self.host + "/home", "Content-Type": "application/octet-stream"}
+        self.media_header = {"User-Agent": self.headers["User-Agent"], "Referer": self.host + "/home", "Origin": self.host}
         self.session = requests.Session()
         self.session.headers.update(self.headers)
         self.class_cache = None
@@ -75,11 +157,24 @@ class Spider(BaseSpider):
                 self.headers["Origin"] = self.host
                 self.headers["Referer"] = self.host + "/home"
                 self.session.headers.update(self.headers)
+                fb = cfg.get("fallback")
+                if isinstance(fb, dict):
+                    _FALLBACK_IPS.update({str(k): str(v) for k, v in fb.items()})
+                    _doh_cache.clear()
             except Exception:
                 None
 
     def getName(self):
         return self.name
+
+    def fix_url(self, url):
+        if not url:
+            return ""
+        if url.startswith("//"):
+            return "https:" + url
+        if url.startswith("/"):
+            return self.host + url
+        return url
 
     def homeContent(self, filter):
         data = self._api("/drama/list", {"page": "1", "page_size": "18"})
@@ -125,9 +220,9 @@ class Spider(BaseSpider):
         if eps:
             for i, ep in enumerate(eps, 1):
                 seq = ep.get("seq") or ep.get("episode") or ep.get("ep") or i
-                play.append("%s$%s|%s" % (ep.get("name") or ep.get("title") or "第%s集" % seq, vod_id, seq))
+                play.append("%s$%s" % (ep.get("name") or ep.get("title") or "第%s集" % seq, self._proxy_url("m3u8", "%s|%s" % (vod_id, seq))))
         else:
-            play = ["第%s集$%s|%s" % (i, vod_id, i) for i in range(1, count + 1)]
+            play = ["第%s集$%s" % (i, self._proxy_url("m3u8", "%s|%s" % (vod_id, i))) for i in range(1, count + 1)]
         vod = {"vod_id": vod_id, "vod_name": name, "vod_pic": self._pic(data), "type_name": data.get("category") or data.get("type") or "", "vod_year": "", "vod_area": "", "vod_remarks": data.get("update_label") or "全%s集" % count, "vod_actor": "", "vod_director": "", "vod_content": data.get("description") or data.get("summary") or name, "vod_play_from": self.name, "vod_play_url": "#".join(play)}
         return {"list": [vod], "parse": 0, "jx": 0}
 
@@ -137,11 +232,104 @@ class Spider(BaseSpider):
         return {"page": int(pg), "pagecount": int(pg) if len(items) < 18 else int(pg) + 1, "limit": 18, "total": 99999, "list": [self._vod(x) for x in items], "parse": 0, "jx": 0}
 
     def playerContent(self, flag, id, vipFlags):
-        vid, seq = self._split(id)
+        s = str(id)
+        if s.startswith("proxy?") or s.startswith("/proxy?") or s.startswith("/local/") or s.startswith("local://") or s.startswith("http://127.0.0.1"):
+            return {"parse": 0, "playUrl": "", "url": s, "jx": 0, "header": self.media_header}
+        vid, seq = self._split(s)
         obj = self._api("/drama/play", {"id": vid, "seq": str(seq)}, True)
         data = obj.get("data", {}) if isinstance(obj, dict) else {}
         url = data.get("m3u8") or data.get("url") or self._hls(vid, seq)
-        return {"parse": 0, "playUrl": "", "url": url, "jx": 0, "header": {"User-Agent": self.headers["User-Agent"], "Referer": self.host + "/home", "Origin": self.host}}
+        return {"parse": 0, "playUrl": "", "url": self._proxy_url("m3u8", url), "jx": 0, "header": self.media_header}
+
+    def localProxy(self, param):
+        p = self._param(param)
+        if p.get("do") != "py":
+            return None
+        typ = p.get("type", "")
+        u = unquote(p.get("url", ""))
+        if not u:
+            return None
+        if typ == "m3u8":
+            if not (u.startswith("http://") or u.startswith("https://")):
+                vid, seq = self._split(u)
+                obj = self._api("/drama/play", {"id": vid, "seq": str(seq)}, True)
+                data = obj.get("data", {}) if isinstance(obj, dict) else {}
+                u = data.get("m3u8") or data.get("url") or self._hls(vid, seq)
+            return [["Content-Type: application/vnd.apple.mpegurl"], self._proxy_m3u8(u)]
+        if typ == "key":
+            try:
+                body = self._media_get(u).content
+            except Exception:
+                body = b""
+            return [["Content-Type: application/octet-stream"], body]
+        if typ == "ts":
+            try:
+                body = self._media_get(u).content
+            except Exception:
+                body = b""
+            return [["Content-Type: video/mp2t"], body]
+        return None
+
+    def _proxy_url(self, typ, url):
+        return "proxy?do=py&type=%s&url=%s" % (typ, quote(url, safe=""))
+
+    def _proxy_m3u8(self, url):
+        try:
+            text = self._media_get(url).content.decode("utf-8", "ignore")
+        except Exception:
+            return b"#EXTM3U\n"
+        out = []
+        for ln in text.splitlines():
+            s = ln.strip()
+            if not s:
+                out.append(ln)
+                continue
+            if s.startswith("#"):
+                if s.startswith("#EXT-X-KEY:"):
+                    m = re.search(r'URI="([^"]+)"', s)
+                    if m:
+                        s = s.replace(m.group(1), self._proxy_url("key", urljoin(url, m.group(1))))
+                out.append(s)
+                continue
+            u = urljoin(url, s)
+            typ = "m3u8" if (u.endswith(".m3u8") or "playlist" in u.lower()) else "ts"
+            out.append(self._proxy_url(typ, u))
+        return "\n".join(out).encode("utf-8")
+
+    def _media_get(self, url):
+        last = None
+        for _ in range(3):
+            try:
+                r = self.session.get(url, headers=self.media_header, timeout=15, verify=False)
+                r.raise_for_status()
+                return r
+            except Exception as e:
+                last = e
+                h = urlparse(url).hostname
+                if h:
+                    _doh_cache.pop(h, None)
+                time.sleep(0.5)
+        raise last
+
+    def _param(self, param):
+        if isinstance(param, dict):
+            return param
+        s = str(param)
+        for pre in ("/proxy?", "/local/", "proxy?", "local://", "/proxy", "proxy", "local"):
+            if s.startswith(pre):
+                s = s[len(pre):]
+                break
+        if s.startswith("?"):
+            s = s[1:]
+        if "?" in s:
+            s = s.split("?", 1)[-1]
+        try:
+            j = json.loads(s)
+            if isinstance(j, dict):
+                return {str(k): str(v) for k, v in j.items()}
+        except Exception:
+            pass
+        return {k: v for k, v in parse_qsl(s)}
 
     def _api(self, path, data=None, silent=False):
         path = "/" + path.lstrip("/")

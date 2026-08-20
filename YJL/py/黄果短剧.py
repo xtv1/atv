@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # coding=utf-8
-import re, json, requests, base64
+import re, json, requests, base64, socket, time
 from urllib.parse import quote, unquote, urlencode
 from base.spider import Spider
 try:
@@ -9,6 +9,54 @@ try:
 except Exception:
     AES = None
     b64encode = None
+
+_doh_cache = {}
+_doh_last = {}
+_doh_resolving = False
+_orig_getaddrinfo = socket.getaddrinfo
+_fallback_ips = {}
+_doh_ttl = 300
+
+
+def _doh_lookup(host):
+    global _doh_resolving
+    now = time.time()
+    if host in _doh_cache and now - _doh_last.get(host, 0) < _doh_ttl:
+        return _doh_cache[host]
+    if _doh_resolving:
+        return _fallback_ips.get(host, "")
+    ip = ""
+    _doh_resolving = True
+    try:
+        for srv in ("https://doh.pub/dns-query", "https://dns.alidns.com/resolve", "https://dns.google/resolve", "https://cloudflare-dns.com/dns-query"):
+            try:
+                r = requests.get(srv, params={"name": host, "type": "A"},
+                                 headers={"Accept": "application/dns-json"}, timeout=3, verify=False)
+                if r.status_code == 200:
+                    for ans in r.json().get("Answer", []):
+                        d = ans.get("data", "")
+                        if ans.get("type") == 1 and re.match(r"^\d+\.\d+\.\d+\.\d+$", d):
+                            ip = d
+                            break
+                if ip:
+                    break
+            except Exception:
+                continue
+    finally:
+        _doh_resolving = False
+    if not ip:
+        ip = _fallback_ips.get(host, "")
+    _doh_cache[host] = ip
+    _doh_last[host] = now
+    return ip
+
+
+def _patched_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    if isinstance(host, str) and not _doh_resolving:
+        ip = _doh_lookup(host)
+        if ip:
+            return _orig_getaddrinfo(ip, port, family, type, proto, flags)
+    return _orig_getaddrinfo(host, port, family, type, proto, flags)
 
 class Spider(Spider):
     def __init__(self):
@@ -55,6 +103,10 @@ class Spider(Spider):
         self.key = bytes(int(c) for c in "102_53_100_57_54_53_100_102_55_53_51_51_54_50_55_48".split("_"))
         self.iv = bytes(int(c) for c in "57_55_98_54_48_51_57_52_97_98_99_50_102_98_101_49".split("_"))
         self.filter_map = {"": {}}
+        self.fallback_ips = {}
+        _fallback_ips.update(self.fallback_ips)
+        socket.getaddrinfo = _patched_getaddrinfo
+        self._pin_host(self.host)
 
     def getName(self):
         return self.name
@@ -79,11 +131,21 @@ class Spider(Spider):
         if not url:
             return ""
         url = url.replace("\\u0026", "&").replace("&amp;", "&")
+        if url.startswith("/proxy?") or url.startswith("/local/") or url.startswith("http://127.0.0.1"):
+            return url
         if url.startswith("//"):
             return "https:" + url
         if url.startswith("/"):
             return self.host + url
         return url
+
+    def _pin_host(self, url):
+        try:
+            m = re.search(r'https?://([^/?#]+)', url)
+            if m:
+                _doh_lookup(m.group(1))
+        except Exception:
+            pass
 
     def proc_pic(self, pic):
         if not pic:
@@ -431,7 +493,7 @@ class Spider(Spider):
                 eps = data.get("epPlaySrcs") or {}
                 play_urls = []
                 for ep_id in sorted(eps.keys(), key=lambda x: int(x)):
-                    play_urls.append("第%02d集$%s" % (int(ep_id), eps[ep_id]))
+                    play_urls.append("第%02d集$%s" % (int(ep_id), self.proxy_play(eps[ep_id])))
                 vod["vod_play_from"] = "黄果短剧"
                 vod["vod_play_url"] = "#".join(play_urls)
             else:
@@ -529,7 +591,7 @@ class Spider(Spider):
         if players:
             play_urls = []
             for idx, src in enumerate(players, 1):
-                play_urls.append("第%02d集$%s" % (idx, src.replace("\\u0026", "&")))
+                play_urls.append("第%02d集$%s" % (idx, self.proxy_play(src.replace("\\u0026", "&"))))
             vod["vod_play_from"] = "黄果短剧"
             vod["vod_play_url"] = "#".join(play_urls)
         else:
@@ -541,7 +603,7 @@ class Spider(Spider):
                     if u not in seen:
                         seen.append(u)
                 vod["vod_play_from"] = "黄果短剧"
-                vod["vod_play_url"] = "#".join("第%02d集$%s" % (i + 1, u) for i, u in enumerate(seen))
+                vod["vod_play_url"] = "#".join("第%02d集$%s" % (i + 1, self.proxy_play(u)) for i, u in enumerate(seen))
             else:
                 vod["vod_play_from"] = "黄果短剧"
                 vod["vod_play_url"] = "第01集$" + vid
@@ -569,8 +631,12 @@ class Spider(Spider):
         if isinstance(id, str) and id.startswith("folder_topic_"):
             return {"parse": 1, "url": id, "header": {}}
         play_url = self.fix_url(id) if id else ""
-        if play_url.endswith('.m3u8') or 'm3u8' in play_url or '.mp4' in play_url:
+        if play_url.startswith("/proxy?") or play_url.startswith("/local/") or play_url.startswith("http://127.0.0.1"):
             result["url"] = play_url
+            result["header"] = json.dumps({"User-Agent": self.header["User-Agent"], "Referer": self.host})
+            return result
+        if 'm3u8' in play_url or '.mp4' in play_url:
+            result["url"] = self.proxy_play(play_url)
             result["header"] = json.dumps({"User-Agent": self.header["User-Agent"], "Referer": self.host})
             return result
         if re.fullmatch(r'\d+', play_url):
@@ -579,6 +645,10 @@ class Spider(Spider):
                 first = d["list"][0].get("vod_play_url", "").split("#")[0]
                 if "$" in first:
                     play_url = self.fix_url(first.split("$", 1)[1])
+        if play_url.startswith("/proxy?") or play_url.startswith("/local/") or play_url.startswith("http://127.0.0.1"):
+            result["url"] = play_url
+            result["header"] = json.dumps({"User-Agent": self.header["User-Agent"], "Referer": self.host})
+            return result
         html = self.getHtml(play_url)
         if not html:
             return result
@@ -594,19 +664,95 @@ class Spider(Spider):
             m = re.search(r'(https?://[^\s"<>\\]*\.m3u8[^\s"<>\\]*)', html)
             if m:
                 m3u8 = m.group(1).replace("\\u0026", "&")
-        result["url"] = m3u8
+        result["url"] = self.proxy_m3u8_url(m3u8) if m3u8 else ""
         result["header"] = json.dumps({"User-Agent": self.header["User-Agent"], "Referer": self.host})
         return result
 
-    def localProxy(self, param):
-        pic = ""
-        if param:
-            pic = param.get("url") or param.get("pic") or ""
-        if not pic:
-            return [404, "text/plain", "nf"]
-        pic = unquote(pic)
+    def proxy_m3u8_url(self, url):
+        return self._proxy_base("m3u8", url)
+
+    def proxy_ts_url(self, url):
+        return self._proxy_base("ts", url)
+
+    def proxy_key_url(self, url):
+        return self._proxy_base("key", url)
+
+    def _proxy_base(self, typ, url):
+        b = self.getProxyUrl()
+        if "?" not in b:
+            b += "?do=py"
+        return b + "&type=" + typ + "&url=" + quote(url)
+
+    def proxy_play(self, url):
+        url = self.fix_url(url)
+        if url.startswith("/proxy?") or url.startswith("/local/") or url.startswith("http://127.0.0.1"):
+            return url
+        if "m3u8" in url.lower():
+            return self.proxy_m3u8_url(url)
+        return url
+
+    def _proxy_m3u8(self, url):
         try:
-            r = requests.get(pic, headers=self.header, timeout=15, verify=False)
+            r = requests.get(url, headers=self.header, timeout=20, verify=False)
+            if r.status_code != 200:
+                return [502, "text/plain", "err:%d" % r.status_code]
+            text = r.text
+            host_base = re.match(r'https?://[^/]+', url)
+            host_base = host_base.group(0) if host_base else ""
+            path_dir = url[:url.rfind("/") + 1] if "/" in url else ""
+            lines = []
+            for line in text.split("\n"):
+                s = line.strip()
+                if not s:
+                    continue
+                if s.startswith("#"):
+                    if 'URI="' in s:
+                        mm = re.search(r'URI="([^"]*)"', s)
+                        if mm:
+                            u = mm.group(1)
+                            if u.startswith("//"):
+                                u = "https:" + u
+                            elif u.startswith("/"):
+                                u = host_base + u
+                            elif not re.match(r'https?://', u):
+                                u = path_dir + u
+                            s = s[:mm.start(1)] + self.proxy_key_url(u) + s[mm.end(1):]
+                    lines.append(s)
+                    continue
+                if re.match(r'https?://', s):
+                    turl = s
+                elif s.startswith("//"):
+                    turl = "https:" + s
+                elif s.startswith("/"):
+                    turl = host_base + s
+                else:
+                    turl = path_dir + s
+                lines.append(self.proxy_ts_url(turl))
+            return [200, "application/vnd.apple.mpegurl", "\n".join(lines).encode("utf-8")]
+        except Exception:
+            return [502, "text/plain", "err"]
+
+    def _proxy_ts(self, url):
+        try:
+            r = requests.get(url, headers=self.header, timeout=20, verify=False)
+            if r.status_code != 200:
+                return [502, "text/plain", "err:%d" % r.status_code]
+            return [200, "video/mp2t", r.content]
+        except Exception:
+            return [502, "text/plain", "err"]
+
+    def _proxy_key(self, url):
+        try:
+            r = requests.get(url, headers=self.header, timeout=20, verify=False)
+            if r.status_code != 200:
+                return [502, "text/plain", "err:%d" % r.status_code]
+            return [200, "application/octet-stream", r.content]
+        except Exception:
+            return [502, "text/plain", "err"]
+
+    def _proxy_pic(self, url):
+        try:
+            r = requests.get(url, headers=self.header, timeout=15, verify=False)
             ct = r.content
             if ct[:3] == b"\xff\xd8\xff":
                 return [200, "image/jpeg", ct]
@@ -630,3 +776,19 @@ class Spider(Spider):
             return [200, "image/jpeg", ct]
         except Exception:
             return [404, "text/plain", "err"]
+
+    def localProxy(self, param):
+        if not param:
+            return [404, "text/plain", "nf"]
+        typ = param.get("type") or ""
+        url = param.get("url") or param.get("pic") or ""
+        if not url:
+            return [404, "text/plain", "nf"]
+        url = unquote(url)
+        if typ == "m3u8":
+            return self._proxy_m3u8(url)
+        if typ == "ts":
+            return self._proxy_ts(url)
+        if typ == "key":
+            return self._proxy_key(url)
+        return self._proxy_pic(url)

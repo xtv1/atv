@@ -34,21 +34,15 @@
     },
            {
       "key": "51短剧",
-      "name": "🐬51短剧.py 墙🔞[成人短剧]",
+      "name": "🐬51短剧.py🔞[成人短剧]",
       "type": 3,
-      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/51短剧🔞TG @hshsjk9.py"
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/51短剧.py"
     },
     {
 			"key": "wddj",
-			"name": "🐬黄豆短剧.py 墙🔞[成人短剧]",
+			"name": "🐬黄豆短剧.py🔞[成人短剧]",
 			"type": 3,
-			"api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/黄豆短剧.py"
-		},
-            {
-			"key": "qjdj",
-			"name": "🐬青桔短剧.py 墙🔞[成人短剧]",
-			"type": 3,
-			"api": "https://raw.giteeusercontent.com/youngxiayang/TVBOX/raw/main/py/%E9%9D%92%E6%A1%94%E7%9F%AD%E5%89%A7.py"
+			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/黄豆短剧.py"
 		},
            {
       "key": "UU视视APP",
@@ -197,11 +191,24 @@
       "type": 3,
       "api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/91吃瓜中心.py"
     },
+        {
+      "key": "911爆料",
+      "name": "🐬911爆料.py｜🔞[吃瓜]",
+      "type": 3,
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/911爆料TG @hshsjk9.py"
+    },
     {
       "key": "91大赛",
       "name": "🐬91大赛(无封面).py｜🔞[吃瓜]",
       "type": 3,
       "api": "https://ghfast.top/https://raw.githubusercontent.com/FGBLH/HKL/refs/heads/main/py/91大赛.py"
+    },
+
+        {
+      "key": "爆瓜网",
+      "name": "🐬爆瓜网.py｜🔞[吃瓜]",
+      "type": 3,
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/uuy988/fgh998/refs/heads/main/py/爆瓜网🔞TG @hshsjk9.py"
     },
     {
       "key": "mrds",
