@@ -60,6 +60,138 @@ except ImportError:
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# ===== DNS 污染防护:DoH 域名钉扎 + 静态 IP 池兜底 =====
+_PIN_MAP = {}
+_PIN_INSTALLED = [False]
+_POISON_IP_PREFIX = ('31.13.94.', '31.13.95.', '75.126.', '157.240.')
+_PIN_CACHE_TTL = [1800]
+_PIN_TIME = {}
+
+# 实测可达的真实 IP 池:主站/播放/图片域名,设备侧 DNS 被劫持时绕过污染
+_STATIC_IP_POOL = {
+    '911bla.com': ['104.21.8.173', '172.67.157.201'],
+    '911bl16.com': ['43.228.232.202', '43.230.113.205', '43.230.114.206', '43.228.233.203', '43.230.112.204'],
+    '911bl.com': ['43.228.233.203', '43.228.232.202', '43.230.113.205', '43.230.114.206', '43.230.112.204'],
+    'd10cq29fdobmmg.cloudfront.net': ['13.32.32.194', '13.32.32.49', '13.32.32.58', '13.32.32.169'],
+    'catch.belwfufv.cc': ['3.175.214.82', '3.175.214.128', '3.175.214.30'],
+    'carry.cyepzjnb.com': ['13.35.190.44', '13.35.190.5', '13.35.190.13', '13.35.190.85'],
+    'admire.cyepzjnb.com': ['13.35.190.13', '13.35.190.85', '13.35.190.44', '13.35.190.5'],
+    'op.etbjf.cn': ['122.188.57.53', '116.162.172.54', '180.178.234.61', '180.178.234.60', '180.178.234.59'],
+    'as.oolrvd.cn': ['43.168.60.46', '43.152.14.61', '43.175.118.114', '43.175.120.27', '43.168.62.60'],
+    'pic.uforxk.cn': ['36.155.170.198', '43.175.44.52', '43.174.128.40'],
+}
+
+
+def _install_pin():
+    if _PIN_INSTALLED[0]:
+        return
+    _PIN_INSTALLED[0] = True
+    _orig = socket.getaddrinfo
+
+    def _pinned(host, port, *args, **kwargs):
+        _ips = _PIN_MAP.get(host)
+        if _ips:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (ip, port)) for ip in _ips]
+        return _orig(host, port, *args, **kwargs)
+
+    socket.getaddrinfo = _pinned
+
+
+def _ip_alive(ip, port=443, timeout=1.0):
+    """快速 TCP 探测,过滤失效 IP。仅用于少量候选时挑可用项。"""
+    try:
+        import socket as _s
+        _s.setdefaulttimeout(timeout)
+        _c = _s.create_connection((ip, port), timeout=timeout)
+        _c.close()
+        return True
+    except Exception:
+        return False
+
+
+def _doh_resolve(hostname):
+    _doh_list = [
+        'https://cloudflare-dns.com/dns-query',
+        'https://dns.google/resolve',
+        'https://doh.pub/dns-query',
+        'https://dns.alidns.com/resolve',
+    ]
+    picked = []
+    for _u in _doh_list:
+        try:
+            _r = requests.get(_u, params={'name': hostname, 'type': 'A'},
+                              headers={'accept': 'application/dns-json'}, timeout=2, verify=False)
+            _j = _r.json()
+            for _a in _j.get('Answer', []):
+                if _a.get('type') == 1 and _a.get('data'):
+                    _d = _a['data']
+                    if _d and not _d.startswith('0.'):
+                        if _d.startswith(_POISON_IP_PREFIX):
+                            continue
+                        picked.append(_d)
+            if picked:
+                break
+        except Exception:
+            continue
+    if len(picked) > 1:
+        picked = [ip for ip in picked[:3] if _ip_alive(ip)] + picked[3:]
+    return picked
+
+
+def _doh_pin_domain(hostname, fallback=None):
+    """国内 DNS 污染时,通过 DoH 获取真实 IP,并钉扎域名解析,绕过被劫持的系统 DNS。
+    静态 IP 池优先且即时生效:有静态池的域名直接钉扎,DoH 仅作后台异步补充。"""
+    try:
+        if not hostname:
+            return
+        _install_pin()
+        _now = time.time()
+        if hostname in _PIN_MAP and _now - _PIN_TIME.get(hostname, 0) < _PIN_CACHE_TTL[0]:
+            return
+        picked = list(_STATIC_IP_POOL.get(hostname, []))
+        if picked:
+            _PIN_MAP[hostname] = picked
+            _PIN_TIME[hostname] = _now
+            _doh_last = _PIN_TIME.get(hostname + ":doh", 0)
+            if _doh_last and _now - _doh_last > 600:
+                _PIN_TIME[hostname + ":doh"] = _now
+                try:
+                    import threading
+
+                    def _doh_refresh(_hn, _pk):
+                        try:
+                            _dh = _doh_resolve(_hn)
+                            if _dh:
+                                _PIN_MAP[_hn] = list(dict.fromkeys(_pk + _dh))
+                        except Exception:
+                            pass
+
+                    threading.Thread(target=_doh_refresh, args=(hostname, picked), daemon=True).start()
+                except Exception:
+                    pass
+            return
+        picked = _doh_resolve(hostname)
+        if not picked and fallback:
+            picked = list(fallback)
+        elif fallback:
+            picked = list(dict.fromkeys(list(fallback) + picked))
+        if picked:
+            _PIN_MAP[hostname] = picked
+            _PIN_TIME[hostname] = _now
+    except Exception:
+        pass
+
+
+def _pin_url_host(url):
+    try:
+        _m = re.match(r'https?://([^/:]+)', url or '')
+        if _m:
+            _doh_pin_domain(_m.group(1))
+    except Exception:
+        pass
+
+
+
 # 全局内存短时缓存 (解决客户端并发请求/预加载/反复切页卡顿)
 CACHE_STORE = {}
 CACHE_LOCK = threading.Lock()
@@ -130,6 +262,7 @@ class Spider(BaseSpider):
         self.session.mount("https://", adapter)
         self.session.headers.update(self.headers)
         self.ext = ""
+        self._last_detail_url = ""
         self._img_cache = {}
         self._img_lock = threading.Lock()
         self.categories = [
@@ -162,7 +295,7 @@ class Spider(BaseSpider):
         return "911爆料网"
 
     def _select_fastest_host(self):
-        """并发测速选出延迟最低且能返回真实内容的主机，缓存 15 分钟"""
+        """并发测速选出延迟最低的主机，并缓存 15 分钟"""
         cache_key = "fastest_911_host"
         cached = get_cache(cache_key)
         if cached:
@@ -173,9 +306,10 @@ class Spider(BaseSpider):
 
         def test_host(u):
             try:
+                _pin_url_host(u)
                 st = time.time()
-                r = requests.get(u + "/category/jrgb/", headers=self.headers, timeout=(1.5, 4), allow_redirects=True, verify=False)
-                if r.status_code == 200 and ("/archives/" in r.text or "<article" in r.text):
+                r = requests.head(u, headers=self.headers, timeout=1.5, allow_redirects=True, verify=False)
+                if r.status_code < 400:
                     results[u] = (time.time() - st) * 1000
                 else:
                     results[u] = float('inf')
@@ -188,10 +322,10 @@ class Spider(BaseSpider):
             t.start()
 
         for t in threads:
-            t.join(timeout=5)
+            t.join(timeout=1.8)
 
         valid = {k: v for k, v in results.items() if v < float('inf')}
-        best = min(valid.items(), key=lambda x: x[1])[0] if valid else self.DOMAIN_POOL[0]
+        best = min(valid.items(), key=lambda x: x)[0] if valid else self.DOMAIN_POOL[0]
         set_cache(cache_key, best, ttl=900)
         return best
 
@@ -206,6 +340,7 @@ class Spider(BaseSpider):
 
         self.headers["Referer"] = self.host + "/"
         self.session.headers.update(self.headers)
+        _pin_url_host(self.host)
         return None
 
     def init(self, extend=""):
@@ -246,6 +381,23 @@ class Spider(BaseSpider):
             pass
         return getattr(self, "t4_api", "")
 
+    def _wrap_media_proxy(self, url):
+        """TVBox 有 localProxy 代理时,把直连 m3u8/mp4 改为经代理地址,规避设备侧
+        DNS 污染与防盗链;本地/无代理环境保持直链。"""
+        try:
+            if not url:
+                return url
+            if not re.search(r'\.(?:m3u8|mp4)(?:$|[?#])', str(url), re.I):
+                return url
+            b = self._proxy_base()
+            if not b:
+                return url
+            _pin_url_host(url)
+            sep = "&" if "?" in b else "?"
+            return b + sep + "type=m3u8&url=" + quote(url, safe="")
+        except Exception:
+            return url
+
     def _fix_pic(self, pic):
         if not pic:
             return ""
@@ -263,6 +415,7 @@ class Spider(BaseSpider):
             self.session = requests.Session()
             self.session.headers.update(self.headers)
 
+        _pin_url_host(url)
         candidates = [url]
         if retry_backup:
             for b_host in self.DOMAIN_POOL:
@@ -270,24 +423,14 @@ class Spider(BaseSpider):
                 if parsed.netloc and parsed.netloc != urlparse(b_host).netloc:
                     candidates.append(url.replace(f"{parsed.scheme}://{parsed.netloc}", b_host))
 
-        for target_url in candidates[:4]:
+        # 双级超时优化：连接超时 2.5s，传输超时 5s
+        for target_url in candidates[:3]:
             try:
                 r = self.session.get(target_url, headers=self.headers, timeout=(2.5, 5), verify=False)
                 if r.status_code == 200:
                     r.encoding = "utf-8"
-                    text = r.text
-                    if len(text) < 200:
-                        continue
-                    m = re.search(r"Base64\.decode\(['\"]([A-Za-z0-9+/=]{100,})['\"]\)", text)
-                    if m:
-                        try:
-                            decoded = base64.b64decode(m.group(1)).decode("utf-8", errors="ignore")
-                            if len(decoded) > 200:
-                                text = decoded
-                        except Exception:
-                            pass
-                    if "/archives/" in text or "<article" in text or "post-card" in text:
-                        return text
+                    if len(r.text) > 200:
+                        return r.text
             except Exception:
                 continue
         return ""
@@ -382,7 +525,7 @@ class Spider(BaseSpider):
             return False
         if len(clean_title) <= 3 and clean_title in ["app", "vip", "gg", "ad", "ads"]:
             return False
-        if raw_node and any(x in raw_node for x in ["rel=\"sponsored\"", "rel='sponsored'", "data-event=\"ad_click\"", "data-event='ad_click'", "post-card-ads", "post-list-ad"]):
+        if raw_node and any(x in raw_node for x in ['rel="sponsored"', 'data-event="ad_click"', 'class="ad', 'class="advert', 'class="sticky-ad']):
             return False
         if not re.search(r"/(?:archives|article|post|detail)/\d+", href) and not re.search(r"/\d+\.html", href):
             return False
@@ -565,6 +708,7 @@ class Spider(BaseSpider):
         html_text = self._fetch(url)
         if not html_text:
             return {"list": []}
+        self._last_detail_url = url
 
         # 1. 标题提取
         title = ""
@@ -613,7 +757,7 @@ class Spider(BaseSpider):
         episodes = []
         for idx, p_url in enumerate(play_urls, 1):
             ep_title = f"视频{idx}" if len(play_urls) > 1 else "在线播放"
-            episodes.append(f"{ep_title}${p_url}")
+            episodes.append(f"{ep_title}${self._wrap_media_proxy(p_url)}")
 
         play_url_str = "#".join(episodes) if episodes else f"在线播放${url}"
 
@@ -650,6 +794,18 @@ class Spider(BaseSpider):
             play_id = play_id.split("$")[-1].strip()
         play_id = unquote(play_id).replace(r'\/', '/').replace('\\', '').strip()
 
+        # 本地代理地址(/proxy? /local/ 或含 type=m3u8 的代理)直接透传
+        if play_id.startswith("http") and ("/proxy?" in play_id or "/local/" in play_id):
+            return {
+                "parse": 0,
+                "playUrl": "",
+                "url": play_id,
+                "header": {
+                    "User-Agent": self.ua,
+                    "Referer": self.host + "/"
+                }
+            }
+
         if self.isVideoFormat(play_id):
             return {
                 "parse": 0,
@@ -671,6 +827,82 @@ class Spider(BaseSpider):
             }
         }
 
+    def _refresh_auth_url(self, old_url):
+        """播放失败时重抓最近详情页,尝试拿到新 auth_key 的 m3u8(CDN 缓存刷新后生效)。"""
+        try:
+            if not self._last_detail_url:
+                return ""
+            html_text = self._fetch(self._last_detail_url)
+            if not html_text:
+                return ""
+            parts = urlparse(old_url).path.rsplit("/", 1)
+            vhash = parts[1].split(".")[0] if len(parts) >= 2 else ""
+            for m in re.finditer(r'https?://[^\s"\'<>\\]+\.m3u8[^\s"\'<>\\]*', html_text):
+                u = m.group(0).replace("\\", "").strip()
+                if vhash and vhash not in u:
+                    continue
+                return u
+        except Exception:
+            return ""
+        return ""
+
+    def _media_proxy(self, pt, url):
+        """m3u8/ts/key 播放代理:拉取远端 m3u8 并把分片/密钥改写为代理地址,
+        规避设备侧 DNS 污染与防盗链。"""
+        try:
+            _pin_url_host(url)
+            host = urlparse(url).hostname
+            req_headers = {
+                "Referer": self.host + "/",
+                "User-Agent": self.ua
+            }
+            r = None
+            for _try in range(3):
+                try:
+                    if _try == 0:
+                        r = self.session.get(url, headers=req_headers, timeout=(2.5, 8), verify=False, allow_redirects=True)
+                    else:
+                        # 失败重试:轮换钉扎 IP 顺序,避开返回 404/400 的坏节点
+                        if host and _PIN_MAP.get(host) and len(_PIN_MAP[host]) > 1:
+                            _PIN_MAP[host].append(_PIN_MAP[host].pop(0))
+                        r = requests.get(url, headers=req_headers, timeout=(2.5, 8), verify=False, allow_redirects=True)
+                    if r.status_code == 200:
+                        break
+                except Exception:
+                    r = None
+                if _try < 2:
+                    time.sleep(0.3)
+            if r is None or r.status_code != 200:
+                new_url = self._refresh_auth_url(url)
+                if new_url and new_url != url:
+                    try:
+                        r = requests.get(new_url, headers=req_headers, timeout=(2.5, 8), verify=False, allow_redirects=True)
+                    except Exception:
+                        r = None
+            if r is None or r.status_code != 200:
+                return [404, "text/plain", "not found"]
+            if pt == "m3u8":
+                body = r.text
+                b = self._proxy_base()
+                if b:
+                    sep = "&" if "?" in b else "?"
+                    body = re.sub(r'(URI=")([^"]+)(")',
+                                  lambda mm: mm.group(1) + b + sep + "type=key&url=" + quote(mm.group(2), safe="") + mm.group(3),
+                                  body)
+                    lines = []
+                    for line in body.splitlines():
+                        s = line.strip()
+                        if s.startswith("http://") or s.startswith("https://"):
+                            line = b + sep + "type=ts&url=" + quote(s, safe="")
+                        lines.append(line)
+                    body = "\n".join(lines)
+                return [200, "application/vnd.apple.mpegurl;charset=UTF-8", body.encode("utf-8")]
+            if pt == "key":
+                return [200, "application/octet-stream", r.content]
+            return [200, "video/mp2t", r.content]
+        except Exception as e:
+            return [500, "text/plain", str(e).encode("utf-8")]
+
     def localProxy(self, param):
         if not hasattr(self, "session") or not self.session:
             self.session = requests.Session()
@@ -683,6 +915,10 @@ class Spider(BaseSpider):
             return [400, "text/plain", b""]
 
         url = unquote(url).strip()
+        _pin_url_host(url)
+        _pt = param.get("type") or ""
+        if _pt in ("m3u8", "ts", "key"):
+            return self._media_proxy(_pt, url)
         if "loadBannerDirect" in url:
             m = re.search(r"loadBannerDirect\(['\"]([^'\"]+)['\"]", url)
             if m:
