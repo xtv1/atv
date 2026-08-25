@@ -12,9 +12,9 @@
 import sys
 import re
 import json
-import base64
 import html
 import time
+import socket
 import threading
 import requests
 import urllib3
@@ -100,10 +100,9 @@ def _install_pin():
 def _ip_alive(ip, port=443, timeout=1.0):
     """快速 TCP 探测,过滤失效 IP。仅用于少量候选时挑可用项。"""
     try:
-        import socket as _s
-        _s.setdefaulttimeout(timeout)
-        _c = _s.create_connection((ip, port), timeout=timeout)
-        _c.close()
+        socket.setdefaulttimeout(timeout)
+        c = socket.create_connection((ip, port), timeout=timeout)
+        c.close()
         return True
     except Exception:
         return False
@@ -125,9 +124,7 @@ def _doh_resolve(hostname):
             for _a in _j.get('Answer', []):
                 if _a.get('type') == 1 and _a.get('data'):
                     _d = _a['data']
-                    if _d and not _d.startswith('0.'):
-                        if _d.startswith(_POISON_IP_PREFIX):
-                            continue
+                    if _d and not _d.startswith('0.') and not _d.startswith(_POISON_IP_PREFIX):
                         picked.append(_d)
             if picked:
                 break
@@ -156,8 +153,6 @@ def _doh_pin_domain(hostname, fallback=None):
             if _doh_last and _now - _doh_last > 600:
                 _PIN_TIME[hostname + ":doh"] = _now
                 try:
-                    import threading
-
                     def _doh_refresh(_hn, _pk):
                         try:
                             _dh = _doh_resolve(_hn)
@@ -171,9 +166,7 @@ def _doh_pin_domain(hostname, fallback=None):
                     pass
             return
         picked = _doh_resolve(hostname)
-        if not picked and fallback:
-            picked = list(fallback)
-        elif fallback:
+        if fallback:
             picked = list(dict.fromkeys(list(fallback) + picked))
         if picked:
             _PIN_MAP[hostname] = picked
@@ -189,8 +182,6 @@ def _pin_url_host(url):
             _doh_pin_domain(_m.group(1))
     except Exception:
         pass
-
-
 
 # 全局内存短时缓存 (解决客户端并发请求/预加载/反复切页卡顿)
 CACHE_STORE = {}
@@ -227,11 +218,28 @@ class Spider(BaseSpider):
     AES_KEY = b"f5d965df75336270"
     AES_IV = b"97b60394abc2fbe1"
 
+    _IMG_ATTRS = ("z-image-loader-url", "data-xkrkllgl", "data-original", "data-src",
+                  "data-lazy-src", "data-cover", "data-thumb", "data-echo", "data-bg", "src")
+    _BAD_PIC_MARKS = ("placeholder", "loading", "blank", "1px", "default", "ads")
+
     AD_KEYWORDS = {
         "app", "911爆料app", "下载app", "官方推荐", "加入911", "章鱼导航", "欲洛降临",
         "七夕活动", "911暑期活动", "回家的路", "投稿方式", "常见问题", "广告商务",
         "所有标签", "关于我们", "官方tg群", "官方推特", "ai换脸脱衣", "广告", "商务合作"
     }
+
+    # 网站主导航的分组分类 (主分类 -> 子分类), 与网页排序一致
+    CATEGORY_GROUPS = [
+        ("18+精选", [("mrds", "每日大赛"), ("hjsq", "海角社区"), ("aidj", "AI短剧"),
+                     ("crfys", "午夜剧场"), ("dmhv", "动漫天堂"), ("sgpjs", "水果派解说")]),
+        ("吃瓜爆料", [("rmgb", "独家爆料"), ("rlph", "黑料排行"), ("ssdbl", "热点吃瓜"),
+                     ("xyss", "校园吃瓜")]),
+        ("名人黑料", [("bgzq", "反差爆料"), ("whbl", "网红黑料"), ("mxhl", "明星吃瓜")]),
+        ("猎奇社区", [("blqw", "猎奇吃瓜"), ("tksm", "偷窥泄密"), ("zksr", "SM专区"),
+                     ("ntll", "男男女女")]),
+        ("尤物品鉴", [("thjx", "探花经典"), ("fljq", "福利视频"), ("crlz", "网黄专辑"),
+                     ("slec", "影视床戏"), ("kpzj", "看片专辑")]),
+    ]
 
     # 多线路域名池（含 CloudFront 亚马逊全球 CDN 与高速镜像）
     DOMAIN_POOL = [
@@ -265,42 +273,27 @@ class Spider(BaseSpider):
         self._last_detail_url = ""
         self._img_cache = {}
         self._img_lock = threading.Lock()
-        self.categories = [
-            {"type_id": "category/jrgb", "type_name": "今日大瓜"},
-            {"type_id": "category/mrds", "type_name": "每日大赛"},
-            {"type_id": "category/hjsq", "type_name": "海角社区"},
-            {"type_id": "category/aidj", "type_name": "AI短剧"},
-            {"type_id": "category/crfys", "type_name": "午夜剧场"},
-            {"type_id": "category/dmhv", "type_name": "动漫天堂"},
-            {"type_id": "category/sgpjs", "type_name": "水果派解说"},
-            {"type_id": "category/rmgb", "type_name": "独家爆料"},
-            {"type_id": "category/rlph", "type_name": "黑料排行"},
-            {"type_id": "category/ssdbl", "type_name": "热点吃瓜"},
-            {"type_id": "category/xyss", "type_name": "校园吃瓜"},
-            {"type_id": "category/bgzq", "type_name": "反差爆料"},
-            {"type_id": "category/whbl", "type_name": "网红黑料"},
-            {"type_id": "category/mxhl", "type_name": "明星吃瓜"},
-            {"type_id": "category/blqw", "type_name": "猎奇吃瓜"},
-            {"type_id": "category/tksm", "type_name": "偷窥泄密"},
-            {"type_id": "category/zksr", "type_name": "SM专区"},
-            {"type_id": "category/ntll", "type_name": "男男女女"},
-            {"type_id": "category/thjx", "type_name": "探花经典"},
-            {"type_id": "category/fljq", "type_name": "福利视频"},
-            {"type_id": "category/crlz", "type_name": "网黄专辑"},
-            {"type_id": "category/slec", "type_name": "影视床戏"},
-            {"type_id": "category/kpzj", "type_name": "看片专辑"}
-        ]
+        self._group_subs = {gname: subs for gname, subs in self.CATEGORY_GROUPS}
+        self.categories = self._build_categories()
+
+    def _build_categories(self):
+        cats = [{"type_id": "category/jrgb", "type_name": "今日大瓜"}]
+        for gname, _ in self.CATEGORY_GROUPS:
+            cats.append({"type_id": gname, "type_name": gname})
+        return cats
 
     def getName(self):
         return "911爆料网"
 
     def _select_fastest_host(self):
-        """并发测速选出延迟最低的主机，并缓存 15 分钟"""
+        """并发探测各域名分类页,选出能解析出内容且延迟最低的主机,并缓存 15 分钟。
+        仅靠 HEAD 延迟会选中返回验证页/跳转页的坏域名,这里直接验证内容有效性。"""
         cache_key = "fastest_911_host"
         cached = get_cache(cache_key)
         if cached:
             return cached
 
+        probe_path = "/category/jrgb/"
         results = {}
         threads = []
 
@@ -308,13 +301,18 @@ class Spider(BaseSpider):
             try:
                 _pin_url_host(u)
                 st = time.time()
-                r = requests.head(u, headers=self.headers, timeout=1.5, allow_redirects=True, verify=False)
-                if r.status_code < 400:
-                    results[u] = (time.time() - st) * 1000
-                else:
-                    results[u] = float('inf')
+                r = requests.get(u + probe_path, headers=self.headers, timeout=3, allow_redirects=True, verify=False)
+                cost = (time.time() - st) * 1000
+                if r.status_code != 200:
+                    results[u] = None
+                    return
+                if not self._looks_like_content(r.text):
+                    results[u] = None
+                    return
+                cards = self._extract_cards(r.text)
+                results[u] = (cost, len(cards)) if len(cards) >= 5 else None
             except Exception:
-                results[u] = float('inf')
+                results[u] = None
 
         for u in self.DOMAIN_POOL:
             t = threading.Thread(target=test_host, args=(u,))
@@ -322,10 +320,10 @@ class Spider(BaseSpider):
             t.start()
 
         for t in threads:
-            t.join(timeout=1.8)
+            t.join(timeout=3.5)
 
-        valid = {k: v for k, v in results.items() if v < float('inf')}
-        best = min(valid.items(), key=lambda x: x)[0] if valid else self.DOMAIN_POOL[0]
+        valid = {k: v for k, v in results.items() if v}
+        best = min(valid.items(), key=lambda x: x[1][0])[0] if valid else self.DOMAIN_POOL[0]
         set_cache(cache_key, best, ttl=900)
         return best
 
@@ -371,6 +369,10 @@ class Spider(BaseSpider):
             return url
         return urljoin(self.host, url)
 
+    @staticmethod
+    def _clean_url(u):
+        return str(u or "").replace(r"\/", "/").replace("\\", "").strip()
+
     def _proxy_base(self):
         try:
             f = getattr(self, "getProxyUrl", None)
@@ -410,10 +412,27 @@ class Spider(BaseSpider):
             pic_url += f"@Referer={self.host}/&User-Agent={self.ua}"
         return pic_url
 
-    def _fetch(self, url, retry_backup=True):
+    @staticmethod
+    def _looks_like_content(html_text):
+        """粗略判断响应是否为真实内容页,用于跳过 JS 验证页/跳转页等无效响应。"""
+        if not html_text or len(html_text) < 500:
+            return False
+        return bool(re.search(r"/(?:archives|article|post|detail)/\d+", html_text, re.I))
+
+    def _ensure_session(self):
         if not hasattr(self, "session") or not self.session:
             self.session = requests.Session()
             self.session.headers.update(self.headers)
+        return self.session
+
+    def _req_headers(self):
+        return {
+            "Referer": self.host + "/",
+            "User-Agent": self.ua
+        }
+
+    def _fetch(self, url, retry_backup=True):
+        self._ensure_session()
 
         _pin_url_host(url)
         candidates = [url]
@@ -423,13 +442,13 @@ class Spider(BaseSpider):
                 if parsed.netloc and parsed.netloc != urlparse(b_host).netloc:
                     candidates.append(url.replace(f"{parsed.scheme}://{parsed.netloc}", b_host))
 
-        # 双级超时优化：连接超时 2.5s，传输超时 5s
-        for target_url in candidates[:3]:
+        # 双级超时优化：连接超时 2.5s，传输超时 5s；JS 验证页/跳转页会被判定为无效并继续尝试下一候选
+        for target_url in candidates:
             try:
                 r = self.session.get(target_url, headers=self.headers, timeout=(2.5, 5), verify=False)
                 if r.status_code == 200:
                     r.encoding = "utf-8"
-                    if len(r.text) > 200:
+                    if self._looks_like_content(r.text):
                         return r.text
             except Exception:
                 continue
@@ -473,6 +492,11 @@ class Spider(BaseSpider):
             return "webp"
         return "jpeg"
 
+    @staticmethod
+    def _good_pic_val(val):
+        v = str(val).strip()
+        return bool(v) and not v.startswith("data:image") and not any(x in v.lower() for x in Spider._BAD_PIC_MARKS)
+
     def _extract_pic_from_node(self, node, raw_str=""):
         if not raw_str and node is not None:
             raw_str = str(node)
@@ -494,26 +518,22 @@ class Spider(BaseSpider):
 
         # 3. 匹配混淆与懒加载属性
         if hasattr(node, "xpath") and etree:
-            for attr in ["z-image-loader-url", "data-xkrkllgl", "data-original", "data-src", "data-lazy-src", "data-cover", "data-thumb", "data-echo", "data-bg", "src"]:
+            for attr in self._IMG_ATTRS:
                 vals = node.xpath(f'.//img/@{attr}')
-                if vals:
-                    val = str(vals[0]).strip()
-                    if val and not val.startswith("data:image") and not any(x in val.lower() for x in ["placeholder", "loading", "blank", "1px", "default", "ads"]):
-                        return val
+                if vals and self._good_pic_val(vals[0]):
+                    return str(vals[0]).strip()
         elif hasattr(node, "select_one"):
             img = node.select_one("img")
             if img:
-                for attr in ["z-image-loader-url", "data-xkrkllgl", "data-original", "data-src", "data-lazy-src", "data-cover", "data-thumb", "data-echo", "data-bg", "src"]:
+                for attr in self._IMG_ATTRS:
                     val = img.get(attr, "")
-                    if val and not val.startswith("data:image") and not any(x in val.lower() for x in ["placeholder", "loading", "blank", "1px", "default", "ads"]):
+                    if self._good_pic_val(val):
                         return val
 
         # 4. 匹配 CSS background-image
         bg_match = re.search(r'background-image\s*:\s*url\([\'"]?([^\'")]+)[\'"]?\)', raw_str, re.I)
-        if bg_match:
-            bg_url = bg_match.group(1).strip()
-            if not bg_url.startswith("data:image") and not any(x in bg_url.lower() for x in ["placeholder", "loading", "blank", "1px", "ads"]):
-                return bg_url
+        if bg_match and self._good_pic_val(bg_match.group(1)):
+            return bg_match.group(1).strip()
 
         return ""
 
@@ -521,7 +541,7 @@ class Spider(BaseSpider):
         if not title or not href:
             return False
         clean_title = title.strip().lower()
-        if clean_title in self.AD_KEYWORDS or any(kw == clean_title for kw in self.AD_KEYWORDS):
+        if clean_title in self.AD_KEYWORDS:
             return False
         if len(clean_title) <= 3 and clean_title in ["app", "vip", "gg", "ad", "ads"]:
             return False
@@ -532,6 +552,14 @@ class Spider(BaseSpider):
         if not pic or not str(pic).strip():
             return False
         return True
+
+    def _make_card(self, href, title, remark, pic):
+        return {
+            "vod_id": self._fix_url(href),
+            "vod_name": title[:100],
+            "vod_pic": self._fix_pic(pic),
+            "vod_remarks": remark
+        }
 
     def _extract_cards(self, html_text):
         videos = []
@@ -559,12 +587,7 @@ class Spider(BaseSpider):
                             if not self._is_valid_item(title, href, pic, raw_str):
                                 continue
 
-                            videos.append({
-                                "vod_id": self._fix_url(href),
-                                "vod_name": title[:100],
-                                "vod_pic": self._fix_pic(pic),
-                                "vod_remarks": remark
-                            })
+                            videos.append(self._make_card(href, title, remark, pic))
                         except Exception:
                             continue
             except Exception:
@@ -587,21 +610,23 @@ class Spider(BaseSpider):
                     if not self._is_valid_item(title, href, pic, str(item)):
                         continue
 
-                    videos.append({
-                        "vod_id": self._fix_url(href),
-                        "vod_name": title[:100],
-                        "vod_pic": self._fix_pic(pic),
-                        "vod_remarks": remark
-                    })
+                    videos.append(self._make_card(href, title, remark, pic))
                 except Exception:
                     continue
 
         return videos
 
     def homeContent(self, filter=False):
+        filters = {}
+        for gname, subs in self.CATEGORY_GROUPS:
+            filters[gname] = [{
+                "key": "sub",
+                "name": "子分类",
+                "value": [{"n": "全部", "v": ""}] + [{"n": name, "v": sid} for sid, name in subs]
+            }]
         return {
             "class": self.categories,
-            "filters": {}
+            "filters": filters
         }
 
     def homeVideoContent(self):
@@ -610,18 +635,35 @@ class Spider(BaseSpider):
 
     def categoryContent(self, tid, pg, filter=False, extend=None):
         page = _page(pg)
-        clean_tid = str(tid or "category/jrgb").strip("/")
-        if not clean_tid.startswith("category/"):
-            clean_tid = f"category/{clean_tid}"
+        raw = str(tid or "category/jrgb").strip("/")
+        group_name, sub_id = self._split_tid(raw)
 
-        cache_key = f"cate_{clean_tid}_{page}"
+        # 主分类页: 用户选择子分类筛选后切换到对应子分类, 默认聚合该组
+        if group_name:
+            sel = (extend or {}).get("sub") or ""
+            if sel in dict(self._group_subs.get(group_name, [])):
+                sub_id, group_name = sel, None
+            else:
+                cache_key = f"cate_group_{group_name}"
+                cached = get_cache(cache_key)
+                if cached:
+                    return cached
+                videos = self._fetch_group(group_name)
+                res = {"list": videos, "page": page, "pagecount": page,
+                       "limit": len(videos) if videos else 20, "total": len(videos)}
+                if videos:
+                    set_cache(cache_key, res, ttl=180)
+                return res
+
+        cache_key = f"cate_{sub_id}_{page}"
         cached = get_cache(cache_key)
         if cached:
             return cached
 
-        url = f"{self.host}/{clean_tid}/{page}/" if page > 1 else f"{self.host}/{clean_tid}/"
+        url = f"{self.host}/category/{sub_id}/{page}/" if page > 1 else f"{self.host}/category/{sub_id}/"
         html_text = self._fetch(url)
         videos = self._extract_cards(html_text)
+
         res = {
             "list": videos,
             "page": page,
@@ -632,6 +674,27 @@ class Spider(BaseSpider):
         if videos:
             set_cache(cache_key, res, ttl=180)
         return res
+
+    def _split_tid(self, raw):
+        """把 type_id 拆成 (主分类名, 子分类id)。
+        "18+精选" 为主分类聚合; "18+精选/aidj" / "category/jrgb" 均按子分类处理。"""
+        parts = raw.split("/") if raw else []
+        if len(parts) >= 2:
+            return None, parts[-1]
+        if raw in self._group_subs:
+            return raw, None
+        return None, raw or "jrgb"
+
+    def _fetch_group(self, group_name):
+        """聚合主分类下所有子分类第一页内容并去重。"""
+        videos, seen = [], set()
+        for sub_id, _ in self._group_subs.get(group_name, []):
+            html_text = self._fetch(f"{self.host}/category/{sub_id}/")
+            for v in self._extract_cards(html_text):
+                if v["vod_id"] not in seen:
+                    seen.add(v["vod_id"])
+                    videos.append(v)
+        return videos
 
     def _extract_video_urls(self, html_text):
         play_urls = []
@@ -650,7 +713,7 @@ class Spider(BaseSpider):
                     m = re.search(r'"video"\s*:\s*\{.*?\"url\"\s*:\s*"([^"]+)"', raw_conf)
                     if m: url = m.group(1)
                 if url:
-                    clean_u = self._fix_url(url.replace(r"\/", "/").replace("\\", "").strip())
+                    clean_u = self._fix_url(self._clean_url(url))
                     if clean_u and clean_u not in seen_urls:
                         seen_urls.add(clean_u)
                         play_urls.append(clean_u)
@@ -678,7 +741,7 @@ class Spider(BaseSpider):
                         play_urls.append(clean_u)
 
         for m in re.finditer(r'video\s*:\s*\{[^\}]*?url\s*:\s*["\']([^"\']+)["\']', html_text, re.I | re.S):
-            raw_u = m.group(1).replace(r"\/", "/").replace("\\", "").strip()
+            raw_u = self._clean_url(m.group(1))
             if raw_u and not raw_u.endswith((".jpg", ".png", ".gif", ".css", ".js")):
                 clean_u = self._fix_url(raw_u)
                 if clean_u not in seen_urls:
@@ -687,7 +750,7 @@ class Spider(BaseSpider):
 
         if not play_urls:
             for direct_m in re.finditer(r'(https?://[^\s"\'<>]+\.(?:m3u8|mp4)[^\s"\'<>]*)', html_text, re.I):
-                clean_u = direct_m.group(1).replace(r"\/", "/").replace("\\", "").strip()
+                clean_u = self._clean_url(direct_m.group(1))
                 if clean_u not in seen_urls:
                     seen_urls.add(clean_u)
                     play_urls.append(clean_u)
@@ -792,33 +855,14 @@ class Spider(BaseSpider):
         play_id = str(id or "").strip()
         if "$" in play_id:
             play_id = play_id.split("$")[-1].strip()
-        play_id = unquote(play_id).replace(r'\/', '/').replace('\\', '').strip()
+        play_id = self._clean_url(unquote(play_id))
 
-        # 本地代理地址(/proxy? /local/ 或含 type=m3u8 的代理)直接透传
-        if play_id.startswith("http") and ("/proxy?" in play_id or "/local/" in play_id):
-            return {
-                "parse": 0,
-                "playUrl": "",
-                "url": play_id,
-                "header": {
-                    "User-Agent": self.ua,
-                    "Referer": self.host + "/"
-                }
-            }
-
-        if self.isVideoFormat(play_id):
-            return {
-                "parse": 0,
-                "playUrl": "",
-                "url": play_id,
-                "header": {
-                    "User-Agent": self.ua,
-                    "Referer": self.host + "/"
-                }
-            }
-
+        # 本地代理地址(/proxy? /local/)或直连视频格式直接透传,其余走解析
+        passthrough = self.isVideoFormat(play_id) or (
+            play_id.startswith("http") and ("/proxy?" in play_id or "/local/" in play_id)
+        )
         return {
-            "parse": 1,
+            "parse": 0 if passthrough else 1,
             "playUrl": "",
             "url": play_id,
             "header": {
@@ -852,10 +896,7 @@ class Spider(BaseSpider):
         try:
             _pin_url_host(url)
             host = urlparse(url).hostname
-            req_headers = {
-                "Referer": self.host + "/",
-                "User-Agent": self.ua
-            }
+            req_headers = self._req_headers()
             r = None
             for _try in range(3):
                 try:
@@ -904,9 +945,7 @@ class Spider(BaseSpider):
             return [500, "text/plain", str(e).encode("utf-8")]
 
     def localProxy(self, param):
-        if not hasattr(self, "session") or not self.session:
-            self.session = requests.Session()
-            self.session.headers.update(self.headers)
+        self._ensure_session()
 
         url = param.get("url") or param.get("img") or ""
         if isinstance(url, list):
@@ -931,10 +970,7 @@ class Spider(BaseSpider):
                 return [200, "image/" + mime, c_data]
 
         try:
-            req_headers = {
-                "Referer": self.host + "/",
-                "User-Agent": self.ua
-            }
+            req_headers = self._req_headers()
             r = self.session.get(url, headers=req_headers, timeout=(2.5, 6), verify=False, allow_redirects=True)
             content = r.content
 
