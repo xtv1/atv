@@ -120,9 +120,9 @@ class Spider(BaseSpider):
     def _get(self, path, params=None):
         """GET 主API, 返回解密后的 dict"""
         raw_q = "&".join("%s=%s" % (k, v) for k, v in (params or {}).items())
-        suffix = path + ("?" + quote(raw_q, safe=self._SAFE) if raw_q else "")
-        url = self.host + "/" + suffix
-        pathq = "/" + suffix
+        encoded_q = quote(raw_q, safe=self._SAFE)
+        url = self.host + "/" + path + ("?" + encoded_q if encoded_q else "")
+        pathq = "/" + path + ("?" + encoded_q if encoded_q else "")
         try:
             r = self.session.get(url, headers=self._HEADERS, timeout=15)
             return self._decrypt(pathq, r.text)
@@ -173,19 +173,6 @@ class Spider(BaseSpider):
             name = (p.get("player_name") or "").strip()
             names[pid] = name if name else pid
         return names
-
-    def _list_params(self, wd="", tid="", cls="", order="最新", area="", year="", pg="1"):
-        """构造 /list 请求参数(列表/搜索/首页回退共用)"""
-        return {
-            "class": cls,
-            "order": order,
-            "type_id": str(tid),
-            "area": area,
-            "year": year,
-            "state": "",
-            "wd": wd,
-            "page": str(pg),
-        }
 
     # ========== 分类与筛选 ==========
 
@@ -266,7 +253,8 @@ class Spider(BaseSpider):
             for v in block.get("list") or []:
                 items.append(self._vod_from_list(v))
         if not items:
-            j = self._get("list", self._list_params(tid="5"))
+            j = self._get("list", {"class": "", "order": "最新", "type_id": "5",
+                                   "area": "", "year": "", "state": "", "wd": "", "page": "1"})
             items = [self._vod_from_list(v) for v in (j or {}).get("data") or []]
 
         return {
@@ -276,7 +264,8 @@ class Spider(BaseSpider):
         }
 
     def homeVideoContent(self):
-        j = self._get("list", self._list_params(tid="5"))
+        j = self._get("list", {"class": "", "order": "最新", "type_id": "5",
+                               "area": "", "year": "", "state": "", "wd": "", "page": "1"})
         items = [self._vod_from_list(v) for v in (j or {}).get("data") or []]
         return {"list": items}
 
@@ -289,10 +278,16 @@ class Spider(BaseSpider):
             if k.startswith("class_more") and v:
                 cls = str(v)
                 break
-        params = self._list_params(tid=tid, cls=cls,
-                                   order=str(extend.get("order") or "最新"),
-                                   area=str(extend.get("area") or ""),
-                                   year=str(extend.get("year") or ""), pg=pg)
+        params = {
+            "class": cls,
+            "order": str(extend.get("order") or "最新"),
+            "type_id": str(tid),
+            "area": str(extend.get("area") or ""),
+            "year": str(extend.get("year") or ""),
+            "state": "",
+            "wd": "",
+            "page": str(pg),
+        }
         j = self._get("list", params)
         lst = (j or {}).get("data") or []
         items = [self._vod_from_list(v) for v in lst]
@@ -371,7 +366,9 @@ class Spider(BaseSpider):
 
     def searchContent(self, key, quick, pg="1"):
         pg = int(pg) if str(pg).isdigit() else 1
-        j = self._get("list", self._list_params(wd=str(key), pg=pg))
+        j = self._get("list", {"class": "", "order": "最新", "type_id": "",
+                               "area": "", "year": "", "state": "", "wd": str(key),
+                               "page": str(pg)})
         lst = (j or {}).get("data") or []
         items = [self._vod_from_list(v) for v in lst]
         pagecount = pg + 1 if items else pg
@@ -392,10 +389,9 @@ class Spider(BaseSpider):
 
         # 路线显示为中文名时, 部分播放器可能把 flag(中文名)直接当源 id 传入, 反查回 pid
         # (同名线路可能对应多个 pid, 优先取解析器映射中真实生效的那个)
-        parsers = self._parsers()
-        if player not in parsers:
+        if player not in self._parsers():
             for pid, name in self._player_names().items():
-                if name == player and pid in parsers:
+                if name == player and pid in self._parsers():
                     player = pid
                     break
 
@@ -403,7 +399,7 @@ class Spider(BaseSpider):
         if ep.startswith("http") and re.search(r"\.(m3u8|mp4|ts|flv)(\?|$)", ep):
             return {"parse": 0, "playUrl": "", "url": ep, "header": "{}"}
 
-        tpl = parsers.get(player)
+        tpl = self._parsers().get(player)
         if not tpl:
             return {"parse": 1, "playUrl": "", "url": ""}
 
