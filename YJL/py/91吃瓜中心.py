@@ -1,3 +1,4 @@
+#发任意内容到邮箱 91cg@pm.me
 import json
 import re
 import sys

@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+#下载页：https://ldk520.vip
+#SEO 站点：https://luolidaoapp.cc
+#TG 群：https://t.me/luolidao111
 import sys, re, json, urllib.parse, os, time
 sys.path.append('..')
 try:

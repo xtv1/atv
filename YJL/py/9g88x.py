@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-【地址一】 ：https://5pdav.com   https://github.com/wyz7777/pangda/blob/main/README.md
 """
 9g88x.com WebHTV Python Spider
 

@@ -13,15 +13,49 @@ class Spider(Spider):
     def getName(self):
         return "有声骚麦"
 
+    candidate_hosts = [
+        "https://yssm2.xyz",
+        "https://www.yssm2.xyz",
+        "https://www.yssm5.xyz",
+        "https://yssm5.xyz",
+        "https://yssm1.xyz",
+    ]
+
     def init(self, extend=""):
-        self.host = "https://www.yssm5.xyz"
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "zh-CN,zh;q=0.9",
-            "Referer": self.host + "/",
         })
+        self.host = self.get_working_host()
+        self.session.headers["Referer"] = self.host + "/"
+
+    def get_working_host(self):
+        for h in self.candidate_hosts:
+            try:
+                r = self.session.get(h + "/", timeout=6)
+                r.encoding = "utf-8"
+                if r.status_code == 200 and "/play.php?id=" in r.text:
+                    return h
+            except Exception:
+                continue
+        return self.candidate_hosts[0]
+
+    def _switch_host(self):
+        old = self.host
+        rest = [h for h in self.candidate_hosts if h != old]
+        for h in rest:
+            try:
+                r = self.session.get(h + "/", timeout=6)
+                r.encoding = "utf-8"
+                if r.status_code == 200 and "/play.php?id=" in r.text:
+                    self.host = h
+                    self.session.headers["Referer"] = h + "/"
+                    return True
+            except Exception:
+                continue
+        return False
 
     def isVideoFormat(self, url):
         return any(x in url.lower() for x in ['.mp3', '.m4a', '.aac', '.m3u8', '.mp4'])
@@ -29,14 +63,31 @@ class Spider(Spider):
     def manualVideoCheck(self):
         return False
 
+    def _rewrite_host(self, url):
+        for h in self.candidate_hosts:
+            if url.startswith(h):
+                return self.host + url[len(h):]
+        return url
+
     def _fetch(self, url):
+        url = self._rewrite_host(url)
         try:
-            r = self.session.get(url, timeout=15)
+            r = self.session.get(url, timeout=8)
             r.encoding = "utf-8"
-            return r.text
+            if r.status_code == 200 and len(r.text) > 2000:
+                return r.text
         except Exception as e:
             print(f"[yssm] 请求失败: {url} -> {e}")
-            return ""
+        if self._switch_host():
+            url = self._rewrite_host(url)
+            try:
+                r = self.session.get(url, timeout=8)
+                r.encoding = "utf-8"
+                if r.status_code == 200:
+                    return r.text
+            except Exception as e:
+                print(f"[yssm] 切换域名后仍失败: {url} -> {e}")
+        return ""
 
     def _abs_url(self, url):
         if not url:

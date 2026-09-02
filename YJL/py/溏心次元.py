@@ -1,4 +1,6 @@
 #!/usr/bin/python
+#站长邮件: txcy2users@gmail.com (新)
+#TG电报: @txcyaduser
 # -*- coding: utf-8 -*-
 import re,json,requests
 from urllib.parse import quote

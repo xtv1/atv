@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# 请发送邮件到 ebnrks87@gmail.com获取最新网站网址
+# 或是地址发佈页：mm18vd.com、mm18news.com、
 import sys
 import re
 import json

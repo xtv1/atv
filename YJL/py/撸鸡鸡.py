@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*- 联系方式：123456@test.cn
 # lujj31.buzz · MacCMS v10 (whosTv女优列表模式+全分类播放修复版)
 import sys, re, json, base64, html, os, threading, time, hashlib
 from urllib.parse import quote, unquote, urljoin, urlparse

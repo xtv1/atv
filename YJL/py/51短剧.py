@@ -1,3 +1,7 @@
+#牢记永久邮箱51duanjuju@gmail.com
+#51短剧最新地址https://2d234.ifmjkkccd.cc
+#永久https://51hub.com/
+#最新地址发布页（收藏此页面永久不迷路）https://gitlab.com/51duanjuju/51duanju
 import sys
 sys.path.append('..')
 

@@ -1,4 +1,6 @@
 # coding=utf-8
+#新地址获取91ym2026@gmail.com
+#官方电报（telegram）群：https://t.me/dycg02
 import sys
 import json
 import re

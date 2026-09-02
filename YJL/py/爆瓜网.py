@@ -1,3 +1,8 @@
+#方法2:邮箱发送任意内容邮件可获取最新地址
+#官方邮箱： baoguawang1@gmail.com
+#方法3:收藏爆瓜网官方最新地址发布页 https://gitlab.com/bgw1com/bgw1com
+
+
 import re
 import json
 import base64

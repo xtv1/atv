@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# !/usr/bin/python
+# !/usr/bin/python发送任意消息到邮箱 911blcgw@gmail.com
 """
 @header({
   searchable: 1,

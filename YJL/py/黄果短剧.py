@@ -1,5 +1,7 @@
 #!/usr/bin/python
 # coding=utf-8
+#huangguoaiai@gmail.com
+#永久中转页huangguoai.ai
 import re, json, requests, base64, socket, time
 from urllib.parse import quote, unquote, urlencode
 from base.spider import Spider

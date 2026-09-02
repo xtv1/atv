@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+#🔗 黑料不打烊最新地址
+#👉 国内：https://cbdy4.com
+#🌐 海外：https://hl365.com
+#🔒 永久：https://hlbdy1.com
+#📧 邮箱：heiliaobdy@gmail.com
 import base64, html, json, re
 from urllib.parse import quote, unquote
 import requests

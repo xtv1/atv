@@ -1,3 +1,8 @@
+#🔥 51爆料最新地址（实时更新）
+#👉 国内：https://51bla11.com
+#🌍 海外：51baoliao01.com
+#📩 最新入口获取（自动回复）
+#👉 51bl.fun@pm.me
 import json
 import re
 import sys

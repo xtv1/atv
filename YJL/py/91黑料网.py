@@ -1,3 +1,8 @@
+#发送任意邮件可获取最新地址
+#邮箱1：91heiliao@gmail.com
+#91黑料吃瓜最新地址 https://91hl7.com
+#91黑料吃瓜永久网址 https://91hliao.vip
+#邮箱2：91hl@pm.me
 import json
 import re
 import sys

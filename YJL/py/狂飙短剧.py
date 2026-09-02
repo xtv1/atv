@@ -11,7 +11,6 @@ class Spider(Spider):
         self.host="https://ai.dramarush.tv"
         self.headers={"User-Agent":"Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 Chrome/131.0 Safari/537.36","Referer":self.host+"/zh/","Accept":"application/json,text/plain,*/*"}
         self.session=requests.Session();self.cache={};self.cursor={};self.seen_page={};self.eps={};self._logged_in=False;self._unlock_cache=set()
-        self.fallback=[{"vod_id":"cms5gkpmm08ic016polf4lbnq","vod_name":"鸭王争霸【已更新】","vod_pic":"https://raw.shorttv.online/images/2026-08-08/aa93208f-c3db-46f9-8a1b-8ac55fcc6298.jpg","vod_remarks":"8集","trailerUrl":"https://raw.shorttv.online/uploads/direct/cms5gkpmr08id016p43cfqk20/video.mp4"},{"vod_id":"cmsgx8rgr00lj010fi6lttg9c","vod_name":"斗破苍穹","vod_pic":"https://cdn.shorttv.online/images/2026-08-06/fca26c04-5a77-492c-a505-fa7440886090.jpg","vod_remarks":"7集","trailerUrl":"/api/media/centaurus/hls/cmsgx8rgu00lk010fjy2kas6p/h264/master.m3u8?tok=69dc75cf2fa24f54fe841a45a7768db4&ep=cmsgx8rgu00lk010fjy2kas6p"},{"vod_id":"cmse0xyci0d300130psgoy5c5","vod_name":"魔毒圣缘","vod_pic":"https://cdn.shorttv.online/images/2026-08-04/2a3f6dc2-7491-4d7e-a2bd-a4d88c092d0f.png","vod_remarks":"4集","trailerUrl":"https://raw.shorttv.online/uploads/direct/cmse0xycl0d310130rev3nav1/video.mp4"},{"vod_id":"cmscmdvbu0ddb0173a71sc57c","vod_name":"萌新三人行","vod_pic":"https://cdn.shorttv.online/images/2026-08-03/7be24fc7-0e0c-4587-b0ae-6b38d93aa5ec.jpg","vod_remarks":"4集","trailerUrl":"https://raw.shorttv.online/uploads/direct/cmscmdvbx0ddc0173yd1b2t9z/video.mp4"},{"vod_id":"cms6za7vq05sh010edvz48iun","vod_name":"精液救世，丧尸围城","vod_pic":"https://cdn.shorttv.online/images/2026-07-30/e1c33bf0-db83-45ce-8213-4a274a9c5b48.jpg","vod_remarks":"4集","trailerUrl":""},{"vod_id":"cms8rjowz00qo01cu1t7z6d8x","vod_name":"等不到的她","vod_pic":"https://cdn.shorttv.online/images/2026-07-31/e04ce57f-2e01-455c-8357-4f4e2de5fc30.jpg","vod_remarks":"5集","trailerUrl":""}]
     def _login(self):
         if self._logged_in:return True
         if not AUTH_EMAIL or not AUTH_PASS:return False
@@ -71,12 +70,6 @@ class Spider(Spider):
             if it.get("vod_id") and name and it["vod_id"] not in seen_id and name not in seen_name:
                 seen_id.add(it["vod_id"]);seen_name.add(name);self.cache[it["vod_id"]]=it;out.append({k:it.get(k,"") for k in ["vod_id","vod_name","vod_pic","vod_remarks"]})
         return out
-    def _fallback_items(self):
-        out=[];seen=set()
-        for x in self.fallback:
-            name=re.sub(r"\s+","",x["vod_name"])
-            if name not in seen:seen.add(name);self.cache[x["vod_id"]]=x;out.append({k:x.get(k,"") for k in ["vod_id","vod_name","vod_pic","vod_remarks"]})
-        return out
     def _list(self,cache_key="t-5jxcit",pg=1,extra=None):
         pg=int(pg)
         tid=extra.get("tid",cache_key) if extra else cache_key
@@ -87,22 +80,44 @@ class Spider(Spider):
         cur=self.cursor.get(cache_key,{}).get(pg)
         if pg>1 and not cur:return []
         mode="all" if tid=="adult_short" else "normal" if tid=="normal_short" else "all";seen=self.seen_page.setdefault(cache_key,set());out=[];nxt=""
+        kind=extra.get("kind","") if extra else ""
         if tid in ["recommend","all",""]:
             d=self._api("feed.recommend",{"limit":12});nxt=d.get("nextCursor") if isinstance(d,dict) else "";li=self._items(d)
             for x in li:
                 k=x.get("vod_id") or re.sub(r"\s+","",x.get("vod_name",""))
                 if k and k not in seen:seen.add(k);out.append(x)
+        elif tid=="rank":
+            data={"limit":12,"tab":"hot"}
+            if kind:data["contentKind"]=kind
+            if cur:data["cursor"]=cur
+            d=self._api("rank.list",data);nxt=d.get("nextCursor") if isinstance(d,dict) else ""
+            for x in self._items(d):
+                k=x.get("vod_id") or re.sub(r"\s+","",x.get("vod_name",""))
+                if k and k not in seen:seen.add(k);out.append(x)
+        elif tid=="today":
+            data={"limit":12,"sort":"new"}
+            if kind:data["contentKind"]=kind
+            if cur:data["cursor"]=cur
+            for _ in range(8):
+                d=self._api("feed.browse",data);nxt=d.get("nextCursor") if isinstance(d,dict) else ""
+                li=self._items(d)
+                for x in li:
+                    k=x.get("vod_id") or re.sub(r"\s+","",x.get("vod_name",""))
+                    if k and k not in seen:seen.add(k);out.append(x)
+                    if len(out)>=12:break
+                if len(out)>=12 or not nxt:break
+                data["cursor"]=nxt
         else:
             base=mp.get(tid,{"categorySlug":tid})
             cat=extra.get("cat","") if extra else ""
             region=extra.get("region","") if extra else ""
-            kind=base.get("contentKind","")
+            kd=base.get("contentKind","")
             if cat:
                 data=dict({"limit":12,"categorySlug":cat})
-                if kind:data["contentKind"]=kind
+                if kd:data["contentKind"]=kd
             elif region:
                 data=dict({"limit":12,"categorySlug":region})
-                if kind:data["contentKind"]=kind
+                if kd:data["contentKind"]=kd
             else:
                 data=dict({"limit":12},**base)
             if cur:data["cursor"]=cur
@@ -124,14 +139,15 @@ class Spider(Spider):
         return out
     def homeContent(self,filter):
         cls=[
-            {"type_id":"adult_short","type_name":"成人短剧"},
-            {"type_id":"normal_short","type_name":"正规短剧"},
             {"type_id":"t-5jxcit","type_name":"短剧"},
             {"type_id":"t-k1gwip","type_name":"长剧"},
             {"type_id":"t-eb9c3c","type_name":"电影"},
             {"type_id":"t-hebbu9","type_name":"综艺"},
             {"type_id":"t-k3onqj","type_name":"动漫"},
-            {"type_id":"t-mqnyjd","type_name":"创作者"},
+            {"type_id":"rank","type_name":"排行榜"},
+            {"type_id":"today","type_name":"今日更新"},
+            {"type_id":"adult_short","type_name":"成人短剧"},
+            {"type_id":"normal_short","type_name":"正规短剧"},
         ]
         ft={
             "t-5jxcit":[
@@ -233,11 +249,27 @@ class Spider(Spider):
                     {"n":"系统","v":"t-kv5ena"},
                 ]},
             ],
+            "rank":[{"key":"kind","name":"频道","value":[
+                {"n":"全部","v":""},
+                {"n":"短剧","v":"SHORT_DRAMA"},
+                {"n":"长剧","v":"SERIES"},
+                {"n":"电影","v":"MOVIE"},
+                {"n":"综艺","v":"VARIETY"},
+                {"n":"动漫","v":"ANIME"},
+            ]}],
+            "today":[{"key":"kind","name":"频道","value":[
+                {"n":"全部","v":""},
+                {"n":"短剧","v":"SHORT_DRAMA"},
+                {"n":"长剧","v":"SERIES"},
+                {"n":"电影","v":"MOVIE"},
+                {"n":"综艺","v":"VARIETY"},
+                {"n":"动漫","v":"ANIME"},
+            ]}],
         }
         regions={"key":"region","name":"地区","value":[{"n":"全部","v":""},{"n":"国产剧","v":"t-zuvois"},{"n":"日剧","v":"t-ue8oql"},{"n":"港台剧","v":"hktwdrama"},{"n":"韩剧","v":"kdrama"},{"n":"泰剧","v":"thaidrama"},{"n":"海外剧","v":"globaldrama"}]}
         for tid in ["t-5jxcit","t-k1gwip","t-eb9c3c","t-hebbu9","t-k3onqj"]:
             ft.setdefault(tid,[]).append(regions)
-        li=self._list("recommend") or self._list("t-5jxcit") or self._fallback_items()
+        li=self._list("recommend") or self._list("t-5jxcit")
         return {"class":cls,"list":li,"filters":ft}
     def categoryContent(self,tid,pg,filter,extend):
         pg=int(pg)
@@ -245,9 +277,9 @@ class Spider(Spider):
             try:extend=json.loads(extend)
             except:extend={}
         if not extend:extend={}
-        cat=extend.get("cat","");region=extend.get("region","")
-        cache_key=tid+"|"+cat+"|"+region
-        li=self._list(cache_key,pg,{"cat":cat,"region":region,"tid":tid})
+        cat=extend.get("cat","");region=extend.get("region","");kind=extend.get("kind","")
+        cache_key=tid+"|"+cat+"|"+region+"|"+kind
+        li=self._list(cache_key,pg,{"cat":cat,"region":region,"kind":kind,"tid":tid})
         has_next=bool(self.cursor.get(cache_key,{}).get(pg+1))
         return {"page":pg,"pagecount":pg+1 if has_next else pg,"limit":12,"total":pg*12+(12 if has_next else 0),"count":len(li),"list":li}
     def _episodes(self,vid):
@@ -258,7 +290,7 @@ class Spider(Spider):
         out=[]
         if not self.cache:self._list("t-5jxcit")
         for vid in ids:
-            it=self.cache.get(vid) or next((x for x in self.fallback if x["vod_id"]==vid),{"vod_id":vid,"vod_name":vid,"vod_pic":"","vod_remarks":"12集","vod_content":""})
+            it=self.cache.get(vid) or {}
             m=re.search(r"(\d+)",it.get("vod_remarks",""));total=max(1,min(int(m.group(1)) if m else 12,80));eps=self._episodes(vid)
             if eps:play="#".join(["第%d集$%s/%d/%s"%(i,vid,i,(eps[i-1].get("id") if i-1<len(eps) and isinstance(eps[i-1],dict) else "")) for i in range(1,total+1)])
             else:play="第1集$%s/1/%s"%(vid,it.get("firstEpisodeId",""))
@@ -281,7 +313,7 @@ class Spider(Spider):
     def playerContent(self,flag,id,vipFlags):
         parts=str(id).split("/");vid=parts[0] if parts else "";ep=parts[1] if len(parts)>1 else "1";eid=parts[2] if len(parts)>2 else ""
         url=""
-        it=self.cache.get(vid) or next((x for x in self.fallback if x["vod_id"]==vid),{})
+        it=self.cache.get(vid) or {}
         try:non_first=int(ep)>1
         except Exception:non_first=True
         if eid:

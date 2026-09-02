@@ -1,3 +1,5 @@
+#发送任意邮件获取最新地址https://gitlab.com/i51shipin/51shipin
+#邮箱：51sp@pm.me
 import json
 import re
 import sys

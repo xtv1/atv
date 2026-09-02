@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#回家地址utv3.cc 发邮件获取新地址 hjav.me@gmail.com
 import base64
 import hashlib
 import hmac

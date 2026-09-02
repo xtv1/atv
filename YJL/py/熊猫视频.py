@@ -1,4 +1,4 @@
-# coding=utf-8
+# coding=utf-8 发送任意邮件:  huanguatv01@gmail.com  获取最新域名
 # !/usr/bin/python
 import sys
 import requests
