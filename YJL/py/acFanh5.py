@@ -336,6 +336,69 @@ class Spider(Spider):
     }
 
     filters_data = {
+        'jx': [
+            {'key': 'jxType', 'name': '分类', 'value': [
+                {'n': '全部', 'v': ''},
+                {'n': '短视频', 'v': 'short'},
+                {'n': '小说', 'v': 'fiction'},
+            ]},
+            {'key': 'shortMode', 'name': '短视频', 'value': [
+                {'n': '发现', 'v': 'find'},
+                {'n': '推荐', 'v': 'rec'},
+            ]},
+            {'key': 'shortPlot', 'name': '剧情', 'value': [
+                {'n': '伦理', 'v': '42'},
+                {'n': '少女', 'v': '43'},
+                {'n': '泄露', 'v': '44'},
+                {'n': '网红', 'v': '45'},
+                {'n': '窥视', 'v': '46'},
+                {'n': '抖音风', 'v': '54'},
+            ]},
+            {'key': 'fictionType', 'name': '小说', 'value': [
+                {'n': '普通', 'v': '1'},
+                {'n': '有声', 'v': '2'},
+            ]},
+            {'key': 'tag1', 'name': '普通标签', 'value': [
+                {'n': '学生妹', 'v': '1'},
+                {'n': '处女', 'v': '2'},
+                {'n': '偷情', 'v': '3'},
+                {'n': '淫荡', 'v': '4'},
+                {'n': '潜规则', 'v': '5'},
+                {'n': '制服丝袜', 'v': '6'},
+                {'n': '人妻', 'v': '7'},
+                {'n': '3P/多P', 'v': '8'}]},
+            {'key': 'tag1', 'name': '普通标签', 'value': [
+                {'n': '车厢', 'v': '9'},
+                {'n': '调教', 'v': '10'},
+                {'n': '乱伦', 'v': '11'},
+                {'n': '强暴', 'v': '12'},
+                {'n': '教师', 'v': '15'},
+                {'n': '办公室', 'v': '16'},
+                {'n': '古典', 'v': '18'},
+                {'n': '美女', 'v': '19'}]},
+            {'key': 'tag1', 'name': '普通标签', 'value': [
+                {'n': '空姐', 'v': '27'},
+                {'n': '另类', 'v': '564'},
+            ]},
+            {'key': 'tag2', 'name': '有声标签', 'value': [
+                {'n': '音频小说', 'v': '29'},
+                {'n': '调教', 'v': '31'},
+                {'n': '淫荡', 'v': '32'},
+                {'n': '人妻', 'v': '33'},
+                {'n': '偷情', 'v': '34'},
+                {'n': '学生妹', 'v': '35'},
+                {'n': '古典', 'v': '36'},
+                {'n': '乱伦', 'v': '37'}]},
+            {'key': 'tag2', 'name': '有声标签', 'value': [
+                {'n': '强暴', 'v': '38'},
+                {'n': '3P/多P', 'v': '39'},
+                {'n': '制服丝袜', 'v': '40'},
+                {'n': '教师', 'v': '41'},
+                {'n': '办公室', 'v': '42'},
+                {'n': '车厢', 'v': '43'},
+                {'n': '空姐', 'v': '54'},
+            ]},
+        ],
         'dm': [
             {'key': 'videoTag', 'name': '分类', 'value': [
                 {'n': '全部', 'v': ''},
@@ -356,7 +419,8 @@ class Spider(Spider):
                 {'n': '美胸巨乳', 'v': '美胸巨乳'},
                 {'n': '探花偷拍', 'v': '探花偷拍'},
                 {'n': '少女萝莉', 'v': '少女萝莉'},
-                {'n': '强奸迷奸', 'v': '强奸迷奸'},
+                {'n': '强奸迷奸', 'v': '强奸迷奸'}]},
+                {'key': 'videoTag', 'name': '分类', 'value': [
                 {'n': '多人群p', 'v': '多人群p'},
                 {'n': '调教SM', 'v': '调教SM'},
                 {'n': '泄露流出', 'v': '泄露流出'},
@@ -373,7 +437,8 @@ class Spider(Spider):
                 {'n': '兄妹', 'v': '兄妹'},
                 {'n': '姐弟', 'v': '姐弟'},
                 {'n': '岳母', 'v': '岳母'},
-                {'n': '嫂子', 'v': '嫂子'},
+                {'n': '嫂子', 'v': '嫂子'}]},
+                {'key': 'videoTag', 'name': '分类', 'value': [
                 {'n': '侄女', 'v': '侄女'},
                 {'n': '师生', 'v': '师生'},
                 {'n': '小姨子', 'v': '小姨子'},
@@ -388,7 +453,8 @@ class Spider(Spider):
                 {'n': '户外露出', 'v': '户外露出'},
                 {'n': '颜值女神', 'v': '颜值女神'},
                 {'n': '反差婊', 'v': '反差婊'},
-                {'n': '明星换脸', 'v': '明星换脸'},
+                {'n': '明星换脸', 'v': '明星换脸'}]},
+                {'key': 'videoTag', 'name': '分类', 'value': [
                 {'n': '推油按摩', 'v': '推油按摩'},
                 {'n': '网红博主', 'v': '网红博主'},
                 {'n': '偷情出轨', 'v': '偷情出轨'},
@@ -405,14 +471,16 @@ class Spider(Spider):
                 {'n': '柚子猫', 'v': '柚子猫'},
                 {'n': '桥本香菜', 'v': '桥本香菜'},
                 {'n': '饼干姐姐', 'v': '饼干姐姐'},
-                {'n': '小欣奈', 'v': '小欣奈'},
+                {'n': '小欣奈', 'v': '小欣奈'}]},
+                {'key': 'videoTag', 'name': '分类', 'value': [
                 {'n': '御梦子', 'v': '御梦子'},
                 {'n': '捅主任', 'v': '捅主任'},
                 {'n': '黑椒盖饭', 'v': '黑椒盖饭'},
                 {'n': '冉冉学姐', 'v': '冉冉学姐'},
                 {'n': '鸡教练', 'v': '鸡教练'},
                 {'n': '唐伯虎', 'v': '唐伯虎'},
-                {'n': '咪妮', 'v': '咪妮'},
+                {'n': '咪妮', 'v': '咪妮'}]},
+                {'key': 'videoTag', 'name': '分类', 'value': [
                 {'n': '玩偶姐姐', 'v': '玩偶姐姐'},
                 {'n': '情深叉喔', 'v': '情深叉喔'},
                 {'n': '水冰月', 'v': '水冰月'},
@@ -429,7 +497,8 @@ class Spider(Spider):
                 {'n': '女仆', 'v': '女仆'},
                 {'n': 'cosplay', 'v': 'cosplay'},
                 {'n': '洛丽塔', 'v': '洛丽塔'},
-                {'n': 'JK学生', 'v': 'JK学生'},
+                {'n': 'JK学生', 'v': 'JK学生'}]},
+                {'key': 'videoTag', 'name': '分类', 'value': [
                 {'n': '丝袜美腿', 'v': '丝袜美腿'},
                 {'n': '激情自慰', 'v': '激情自慰'},
                 {'n': '空姐', 'v': '空姐'},
@@ -458,8 +527,14 @@ class Spider(Spider):
                 {'n': 'jvid', 'v': 'jvid'},
                 {'n': '蜜桃传媒', 'v': '蜜桃传媒'},
                 {'n': '天美传媒', 'v': '天美传媒'},
-                {'n': '糖心vlog', 'v': '糖心vlog'},
+                {'n': '糖心vlog', 'v': '糖心vlog'}]},
+                {'key': 'videoTag', 'name': '分类', 'value': [
                 {'n': '性视界', 'v': '性视界'},
+                {'n': '91制片厂', 'v': '91制片厂'},
+                {'n': '兔子先生', 'v': '兔子先生'},
+                {'n': '星空传媒', 'v': '星空传媒'},
+                {'n': '大象传媒', 'v': '大象传媒'},
+                {'n': '香蕉传媒', 'v': '香蕉传媒'},
             ]},
         ],
         'zhongkou': [
@@ -497,12 +572,14 @@ class Spider(Spider):
     }
 
     def getName(self): return "AcFanH5"
-    def isVideoFormat(self, url): return bool(url and ('.m3u8' in url or '.mp4' in url))
+    def isVideoFormat(self, url): return bool(url and ('.m3u8' in url or '.mp4' in url or '.mp3' in url))
     def manualVideoCheck(self): return False
     def destroy(self): pass
 
     def init(self, extend=""):
         self.session.verify = False
+        self.short_pages = {}
+        self.short_index = {}
         _doh_pin_domain(self.host.split('//')[-1].split('/')[0],
                         fallback=['108.138.7.103', '108.138.7.96', '108.138.7.85', '108.138.7.49'])
 
@@ -525,10 +602,10 @@ class Spider(Spider):
             'sid': sid,
         }
 
-    def _dec(self, enc, decrypt_token=None):
+    def _dec(self, enc):
         if not enc:
             return None
-        tk = decrypt_token or self.token
+        tk = self.token
         try:
             k = tk[2:18].encode('utf-8')
             raw = base64.b64decode(enc)
@@ -538,45 +615,17 @@ class Spider(Spider):
         except:
             return None
 
-    def _api(self, path, params=None):
+    def _api(self, path, params=None, method='GET'):
         for _ in range(3):
             h = self._hdr()
             p = dict(params or {})
             p['_t'] = h['t']
             url = self.host + '/api' + path
             try:
-                r = self.session.get(url, params=p, headers=h, timeout=15, verify=False, allow_redirects=False)
-                if not r.text:
-                    continue
-                new_token = r.headers.get('refresh-authorization', '') or r.headers.get('Refresh-Authorization', '')
-                if new_token:
-                    self.token = new_token
-                j = r.json()
-                if not isinstance(j, dict):
-                    return j
-                code = j.get('code', 0)
-                if code == 301:
-                    if new_token:
-                        continue
-                    return None
-                if code != 200:
-                    return None
-                if j.get('encData'):
-                    d = self._dec(j['encData'])
-                    return d if d is not None else None
-                return j.get('data') if 'data' in j else j
-            except:
-                continue
-        return None
-
-    def _api_post(self, path, params=None):
-        for _ in range(3):
-            h = self._hdr()
-            p = dict(params or {})
-            p['_t'] = h['t']
-            url = self.host + '/api' + path
-            try:
-                r = self.session.post(url, json=p, headers=h, timeout=15, verify=False, allow_redirects=False)
+                if method == 'POST':
+                    r = self.session.post(url, json=p, headers=h, timeout=15, verify=False, allow_redirects=False)
+                else:
+                    r = self.session.get(url, params=p, headers=h, timeout=15, verify=False, allow_redirects=False)
                 if not r.text:
                     continue
                 new_token = r.headers.get('refresh-authorization', '') or r.headers.get('Refresh-Authorization', '')
@@ -695,6 +744,10 @@ class Spider(Spider):
                 v = data.get(k)
                 if isinstance(v, list):
                     return v
+                if isinstance(v, dict):
+                    inner = v.get('data') or v.get('list')
+                    if isinstance(inner, list):
+                        return inner
         return []
 
     def _domain(self, data):
@@ -717,20 +770,14 @@ class Spider(Spider):
             {'type_id': 'zhongkou', 'type_name': '重口'},
             {'type_id': 'manhua', 'type_name': '漫画'},
         ]
-        videos = []
-        try:
-            data = self._api('/video/getByClassify', {'page': 1, 'pageSize': 20, 'classifyId': 4, 'sortType': 0, 'restricted': 0})
-            videos = self._parse_list(data)
-        except:
-            pass
-        return {'class': classes, 'filters': self.filters_data, 'list': videos, 'type': '影视'}
+        return {'class': classes, 'filters': self.filters_data, 'list': self._home_videos(), 'type': '影视'}
 
     def homeVideoContent(self):
-        try:
-            data = self._api('/video/getByClassify', {'page': 1, 'pageSize': 20, 'classifyId': 4, 'sortType': 0, 'restricted': 0})
-            return {'list': self._parse_list(data)}
-        except:
-            return {'list': []}
+        return {'list': self._home_videos()}
+
+    def _home_videos(self):
+        data = self._api('/video/getByClassify', {'page': 1, 'pageSize': 20, 'classifyId': 4, 'sortType': 0, 'restricted': 0})
+        return self._parse_list(data)
 
     def categoryContent(self, tid, pg, filter, extend):
         page = int(pg) if pg else 1
@@ -739,14 +786,22 @@ class Spider(Spider):
                 extend = json.loads(extend)
             except:
                 extend = {}
-        if not extend:
-            extend = {}
+        extend = extend or {}
         if str(tid) == 'manhua':
             return self._comic_category(page, extend)
-        cid = extend.get('classifyId', '')
-        if not cid:
-            cid = self.cat_map.get(str(tid), '')
-        vt = extend.get('videoTag', '')
+        if str(tid) == 'jx':
+            jx_type = self._ext_val(extend, 'jxType')
+            if not jx_type:
+                if self._ext_val(extend, 'fictionType') or self._ext_val(extend, 'tag1') or self._ext_val(extend, 'tag2'):
+                    jx_type = 'fiction'
+                elif self._ext_val(extend, 'shortMode') or self._ext_val(extend, 'shortPlot'):
+                    jx_type = 'short'
+            if jx_type == 'short':
+                return self._short_category(page, extend)
+            if jx_type == 'fiction':
+                return self._fiction_category(page, extend)
+        cid = self._ext_val(extend, 'classifyId') or self.cat_map.get(str(tid), '')
+        vt = self._ext_val(extend, 'videoTag')
         if vt:
             params = {'tagsTitle': vt, 'page': page, 'pageSize': 20, 'sortType': 0, 'restricted': 0}
             data = self._api('/video/tagTitleList', params)
@@ -754,8 +809,8 @@ class Spider(Spider):
             params = {'page': page, 'pageSize': 20, 'sortType': 0, 'restricted': 0, 'classifyId': cid}
             data = self._api('/video/getByClassify', params)
         items = self._parse_list(data)
-        pc = page + 1 if items else 1
-        return {'page': page, 'pagecount': pc, 'limit': 20, 'total': pc * 20, 'list': items}
+        total = data.get('total') if isinstance(data, dict) else 0
+        return self._page_result(page, items, total)
 
     def detailContent(self, ids):
         vid = str(ids[0] if isinstance(ids, list) else ids)
@@ -765,10 +820,14 @@ class Spider(Spider):
         pic = unquote(ps[3]) if len(ps) > 3 else ''
         if str(rid).startswith('c_'):
             return self._comic_detail(rid[2:], name, pic)
+        if str(rid).startswith('f_'):
+            return self._fiction_detail(rid[2:], name, pic)
+        if str(rid).startswith('srec_') or str(rid).startswith('s_'):
+            real = rid[5:] if str(rid).startswith('srec_') else rid[2:]
+            return self._short_detail(real, name, pic)
         data = self._api('/video/getVideoById', {'videoId': rid})
-        vname, vpic, vcontent, video_url, auth_key = name, pic, '', '', ''
+        vname, vpic, vcontent, video_url = name, pic, '', ''
         domain = ''
-        cdn_list = []
         if isinstance(data, dict):
             domain = data.get('domain', '')
             vname = data.get('title') or vname
@@ -777,28 +836,19 @@ class Spider(Spider):
                 vpic = vpic[0] if vpic else vpic
             vcontent = data.get('description') or data.get('synopsis') or ''
             video_url = data.get('videoUrl') or data.get('playUrl') or ''
-            auth_key = data.get('authKey') or ''
-            cdn_list = data.get('cdnList') or []
             tags = data.get('tagTitles') or []
             if tags:
                 vcontent = '标签: ' + ' '.join(tags) + ('\n' + vcontent if vcontent else '')
-        play_from = 'AcFanH5'
         play_url = ''
-        if video_url:
-            try:
-                b = self.getProxyUrl()
-                if '?' not in b:
-                    b += '?do=py'
-                m3u8_api = self.host + '/api/m3u8/h5/decode?path=' + quote(video_url, safe='')
-                play_url = '播放$' + b + '&type=m3u8&url=' + quote(m3u8_api, safe='')
-            except:
-                play_url = '播放$' + self.host + '/api/m3u8/h5/decode?path=' + quote(video_url, safe='')
+        line = self._m3u8_play(video_url)
+        if line:
+            play_url = '播放$' + line
         vod = {
             'vod_id': vid,
             'vod_name': vname,
             'vod_pic': self._img(vpic, domain),
             'vod_content': vcontent,
-            'vod_play_from': play_from,
+            'vod_play_from': 'AcFanH5',
             'vod_play_url': play_url,
         }
         return {'list': [vod]}
@@ -806,22 +856,21 @@ class Spider(Spider):
     def searchContent(self, key, quick, pg="1"):
         page = int(pg) if pg else 1
         data = self._api('/search/keyWordV2', {'searchWord': key, 'page': page, 'pageSize': 20})
-        items = []
-        domain = ''
-        if isinstance(data, dict):
-            domain = data.get('domain', '')
-            items = data.get('videoList') or []
-            if isinstance(items, dict):
-                items = items.get('data') or []
-        elif isinstance(data, list):
-            items = data
-        pc = page + 1 if items else 1
-        return {'list': self._parse_list({'domain': domain, 'data': items}), 'page': page, 'pagecount': pc, 'limit': 20, 'total': pc * 20}
+        items = self._parse_list(data)
+        total = data.get('total') if isinstance(data, dict) else 0
+        return self._page_result(page, items, total)
 
     def playerContent(self, flag, id, vipFlags=None):
         url = id or ''
         hdr = {'User-Agent': self.UA, 'Referer': self.host + '/', 'Origin': self.host}
-        if self.isVideoFormat(url):
+        if url.startswith('novel://'):
+            return {'parse': 0, 'url': url, 'header': hdr}
+        if url.startswith('fplay:'):
+            play = self._fiction_play(url)
+            if play:
+                return {'parse': 0, 'url': play, 'header': hdr}
+            return {'parse': 1, 'url': url, 'header': hdr}
+        if self.isVideoFormat(url) or (url and '.txt' in url):
             return {'parse': 0, 'url': url, 'header': hdr}
         if url.startswith(self.host + '/api/m3u8/'):
             return {'parse': 0, 'url': url, 'header': hdr}
@@ -829,20 +878,294 @@ class Spider(Spider):
             return {'parse': 0, 'url': url, 'header': hdr}
         return {'parse': 1, 'url': url, 'header': hdr}
 
-    def _comic_category(self, page, extend):
-        vt = extend.get('videoTag', '')
-        cid = self.comic_class.get(vt, '1')
-        data = self._api_post('/comics/base/findList', {'classId': cid, 'orderType': 0, 'restricted': 0, 'page': page, 'pageSize': 20})
-        items = self._comic_parse_list(data)
-        total = data.get('total') if isinstance(data, dict) else 0
+    def _ext_val(self, extend, key):
+        v = extend.get(key, '')
+        if isinstance(v, list):
+            v = v[0] if v else ''
+        if v is None:
+            v = ''
+        return str(v).strip()
+
+    def _page_result(self, page, items, total=0, limit=20):
         if total:
-            pc = -(-int(total) // 20)
+            pc = -(-int(total) // limit)
         else:
             pc = page + 1 if items else 1
-        return {'page': page, 'pagecount': pc, 'limit': 20, 'total': total if total else pc * 20, 'list': items}
+        return {'page': page, 'pagecount': pc, 'limit': limit, 'total': total if total else pc * limit, 'list': items}
+
+    def _m3u8_play(self, video_url):
+        if not video_url:
+            return ''
+        path = str(video_url)
+        try:
+            b = self.getProxyUrl()
+            if '?' not in b:
+                b += '?do=py'
+            m3u8_api = self.host + '/api/m3u8/h5/decode?path=' + quote(path, safe='')
+            return b + '&type=m3u8&url=' + quote(m3u8_api, safe='')
+        except:
+            return self.host + '/api/m3u8/h5/decode?path=' + quote(path, safe='')
+
+    def _short_cache_put(self, bucket, page, data):
+        if not hasattr(self, 'short_pages'):
+            self.short_pages = {}
+        if not hasattr(self, 'short_index'):
+            self.short_index = {}
+        raw = [it for it in self._items(data) if isinstance(it, dict)]
+        self.short_pages[(bucket, page)] = {
+            'domain': self._domain(data),
+            'items': raw,
+        }
+        for it in raw:
+            iid = str(it.get('videoId') or '')
+            if iid:
+                self.short_index[iid] = (bucket, page)
+
+    def _short_cache_get(self, vid):
+        pages = getattr(self, 'short_pages', {}) or {}
+        key = getattr(self, 'short_index', {}).get(str(vid))
+        if key in pages:
+            return pages[key]
+        for pack in pages.values():
+            for it in pack.get('items') or []:
+                if str(it.get('videoId') or '') == str(vid):
+                    return pack
+        return None
+
+    def _short_category(self, page, extend):
+        mode = self._ext_val(extend, 'shortMode') or 'find'
+        plot = self._ext_val(extend, 'shortPlot')
+        if mode == 'rec':
+            data = self._api('/video/list', {'page': page, 'pageSize': 20, 'loadType': 2})
+            self._short_cache_put('rec', page, data)
+            items = self._parse_list(data, id_prefix='s_')
+        else:
+            cid = plot or '42'
+            data = self._api('/video/getByClassify', {'page': page, 'pageSize': 20, 'classifyId': cid, 'sortType': 1, 'restricted': 0})
+            self._short_cache_put('find_' + cid, page, data)
+            items = self._parse_list(data, id_prefix='s_')
+        total = data.get('total') if isinstance(data, dict) else 0
+        return self._page_result(page, items, total)
+
+    def _short_detail(self, vid, name, pic):
+        clicked = str(vid)
+        cached = self._short_cache_get(clicked)
+        items = list((cached or {}).get('items') or [])
+        domain = (cached or {}).get('domain') or ''
+        seen = set()
+        ordered = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            iid = str(item.get('videoId') or '')
+            if not iid or iid in seen:
+                continue
+            seen.add(iid)
+            ordered.append(item)
+        head = [it for it in ordered if str(it.get('videoId')) == clicked]
+        if not head:
+            data = self._api('/video/getVideoById', {'videoId': clicked})
+            if isinstance(data, dict) and (data.get('videoId') or data.get('videoUrl') or data.get('playUrl')):
+                if not domain:
+                    domain = data.get('domain', '')
+                head = [data]
+        tail = [it for it in ordered if str(it.get('videoId')) != clicked]
+        ordered = head + tail
+        play_parts = []
+        vname, vpic, vcontent = name, pic, '短视频'
+        for item in ordered:
+            iid = str(item.get('videoId') or '')
+            title = str(item.get('title') or iid)
+            vurl = item.get('videoUrl') or item.get('playUrl') or ''
+            line = self._m3u8_play(vurl)
+            if not line:
+                continue
+            play_parts.append(title.replace('#', ' ').replace('$', ' ') + '$' + line)
+            if iid == clicked:
+                vname = title
+                vpic = item.get('coverImg') or vpic
+                if isinstance(vpic, list):
+                    vpic = vpic[0] if vpic else vpic
+                tags = item.get('tagTitles') or []
+                if tags:
+                    vcontent = '标签: ' + ' '.join(tags)
+        vod = {
+            'vod_id': 's_' + str(vid),
+            'vod_name': vname or '短视频',
+            'vod_pic': self._img(vpic, domain),
+            'vod_content': vcontent,
+            'vod_play_from': '短视频',
+            'vod_play_url': '#'.join(play_parts),
+        }
+        return {'list': [vod]}
+
+    def _fiction_category(self, page, extend):
+        ftype = self._ext_val(extend, 'fictionType') or '1'
+        tag_key = 'tag2' if ftype == '2' else 'tag1'
+        tag = self._ext_val(extend, tag_key)
+        params = {'fictionType': int(ftype) if ftype.isdigit() else 1, 'page': page, 'pageSize': 20}
+        if tag and tag.isdigit():
+            params['tagIds'] = [int(tag)]
+        data = self._api('/fiction/base/findList', params, method='POST')
+        items = self._fiction_parse_list(data)
+        total = data.get('total') if isinstance(data, dict) else 0
+        return self._page_result(page, items, total)
+
+    def _fiction_parse_list(self, data):
+        domain = self._domain(data)
+        items = self._items(data)
+        res = []
+        seen = set()
+        for item in (items or []):
+            try:
+                if not isinstance(item, dict):
+                    continue
+                fid = str(item.get('fictionId') or '')
+                if not fid or fid in seen:
+                    continue
+                seen.add(fid)
+                name = str(item.get('fictionTitle') or fid)
+                pic = item.get('coverImg') or ''
+                if isinstance(pic, list):
+                    pic = pic[0] if pic else ''
+                num = str(item.get('chapterNewNum') or item.get('chapterNum') or '')
+                ftype = item.get('fictionType')
+                remark = '有声' if str(ftype) == '2' else ''
+                if num and str(num).isdigit():
+                    remark = (remark + ' ' if remark else '') + (num + '章')
+                sid = 'f_' + fid + '@@@' + '' + '@@@' + quote(str(name)) + '@@@' + quote(str(pic) if isinstance(pic, str) else '')
+                res.append({
+                    'vod_id': sid,
+                    'vod_name': name,
+                    'vod_pic': self._img(pic, domain),
+                    'vod_remarks': remark,
+                })
+            except:
+                continue
+        return res
+
+    def _fiction_detail(self, fid, name, pic):
+        data = self._api('/fiction/base/info', {'fictionId': fid})
+        vname, vpic, domain, chapters = name, pic, '', []
+        tags = []
+        info = ''
+        ftype = 1
+        if isinstance(data, dict):
+            domain = data.get('domain', '')
+            vname = data.get('fictionTitle') or vname
+            vpic = data.get('coverImg') or vpic
+            chapters = data.get('chapters') or data.get('chapterList') or []
+            tags = data.get('tagList') or []
+            info = data.get('info') or ''
+            ftype = data.get('fictionType') or 1
+        tlist = []
+        for t in (tags or []):
+            if isinstance(t, dict) and t.get('title'):
+                tlist.append(str(t['title']))
+        content = '标签: ' + ' '.join(tlist) if tlist else ('有声小说' if str(ftype) == '2' else '小说')
+        if info:
+            content = content + '\n' + str(info)
+        play_parts = []
+        is_audio = str(ftype) == '2'
+        for ch in (chapters or []):
+            try:
+                cid = ch.get('chapterId')
+                if not cid:
+                    continue
+                ch_name = str(ch.get('chapterTitle') or ('第%d章' % (ch.get('chapterNum') or 0)))
+                ch_name = ch_name.replace('#', ' ').replace('$', ' ')
+                play_parts.append(ch_name + '$fplay:' + str(fid) + ':' + str(cid))
+            except:
+                continue
+        vod = {
+            'vod_id': 'f_' + str(fid),
+            'vod_name': vname,
+            'vod_pic': self._img(vpic, domain),
+            'vod_content': content,
+            'vod_play_from': '视频' if is_audio else '小说',
+            'vod_play_url': '#'.join(play_parts),
+        }
+        return {'list': [vod]}
+
+    def _join_url(self, domain, path):
+        if not path:
+            return ''
+        path = str(path)
+        if path.startswith('http://') or path.startswith('https://'):
+            return path
+        d = str(domain or '')
+        if d and not d.endswith('/'):
+            d += '/'
+        return d + path.lstrip('/') if d else path
+
+    def _fetch_txt(self, url):
+        if not url:
+            return ''
+        try:
+            _pin_url_host(url)
+            r = self.session.get(url, headers={'User-Agent': self.UA, 'Referer': self.host + '/'}, timeout=15, verify=False)
+            if r.status_code != 200 or not r.content:
+                return ''
+            raw = r.content
+            for enc in ('utf-8', 'gbk', 'gb2312'):
+                try:
+                    return raw.decode(enc)
+                except:
+                    continue
+            return raw.decode('utf-8', 'ignore')
+        except:
+            return ''
+
+    def _novel_play(self, ci, name=''):
+        fic = (ci or {}).get('fictionUrl') or ''
+        play = (ci or {}).get('playPath') or ''
+        domain = (ci or {}).get('domain') or ''
+        txt_url = play or self._join_url(domain, fic)
+        title = name or str((ci or {}).get('chapterTitle') or '正文')
+        body = self._fetch_txt(txt_url)
+        payload = {
+            'name': title,
+            'url': txt_url,
+            'content': body,
+        }
+        return 'novel://' + json.dumps(payload, ensure_ascii=False)
+
+    def _audio_video_play(self, ci):
+        fic = (ci or {}).get('fictionUrl') or ''
+        play = (ci or {}).get('playPath') or ''
+        domain = (ci or {}).get('domain') or ''
+        mp4d = (ci or {}).get('mp4Domain') or ''
+        if fic and ('.m3u8' in str(fic) or '.mp4' in str(fic)):
+            return self._m3u8_play(fic)
+        if mp4d and fic:
+            return self._join_url(mp4d, fic)
+        if play:
+            return play
+        return self._join_url(domain, fic)
+
+    def _fiction_play(self, url):
+        ps = str(url).split(':')
+        fid = ps[1] if len(ps) > 1 else ''
+        cid = ps[2] if len(ps) > 2 else ''
+        ci = self._api('/fiction/base/chapterInfo', {'chapterId': cid, 'fictionId': fid})
+        if not isinstance(ci, dict):
+            return ''
+        ftype = str(ci.get('fictionType') or '')
+        fic = str(ci.get('fictionUrl') or '')
+        if ftype == '1' or (fic.endswith('.txt') and '.mp3' not in fic and '.m3u8' not in fic and '.mp4' not in fic):
+            return self._novel_play(ci, str(ci.get('chapterTitle') or ''))
+        return self._audio_video_play(ci)
+
+    def _comic_category(self, page, extend):
+        vt = self._ext_val(extend, 'videoTag')
+        cid = self.comic_class.get(vt, '1')
+        data = self._api('/comics/base/findList', {'classId': cid, 'orderType': 0, 'restricted': 0, 'page': page, 'pageSize': 20}, method='POST')
+        items = self._comic_parse_list(data)
+        total = data.get('total') if isinstance(data, dict) else 0
+        return self._page_result(page, items, total)
 
     def _comic_parse_list(self, data):
-        domain = self._domain(data) if isinstance(data, dict) else ''
+        domain = self._domain(data)
         items = self._items(data)
         res = []
         seen = set()
@@ -912,8 +1235,8 @@ class Spider(Spider):
         }
         return {'list': [vod]}
 
-    def _parse_list(self, data):
-        domain = self._domain(data) if isinstance(data, dict) else ''
+    def _parse_list(self, data, id_prefix=''):
+        domain = self._domain(data)
         items = self._items(data)
         res = []
         seen = set()
@@ -932,7 +1255,7 @@ class Spider(Spider):
                 dur = str(item.get('playTime') or '')
                 if dur and dur.isdigit():
                     dur = str(int(dur) // 60) + ':' + str(int(dur) % 60).zfill(2)
-                sid = vid + '@@@' + '' + '@@@' + quote(str(name)) + '@@@' + quote(str(pic) if isinstance(pic, str) else '')
+                sid = str(id_prefix) + vid + '@@@' + '' + '@@@' + quote(str(name)) + '@@@' + quote(str(pic) if isinstance(pic, str) else '')
                 res.append({
                     'vod_id': sid,
                     'vod_name': name,

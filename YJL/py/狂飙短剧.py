@@ -70,73 +70,66 @@ class Spider(Spider):
             if it.get("vod_id") and name and it["vod_id"] not in seen_id and name not in seen_name:
                 seen_id.add(it["vod_id"]);seen_name.add(name);self.cache[it["vod_id"]]=it;out.append({k:it.get(k,"") for k in ["vod_id","vod_name","vod_pic","vod_remarks"]})
         return out
+    def _fill(self,out,seen,items):
+        for x in items:
+            k=x.get("vod_id") or re.sub(r"\s+","",x.get("vod_name",""))
+            if k and k not in seen:seen.add(k);out.append(x)
+    def _rank(self,cache_key,pg,tab,kind,mode="all"):
+        data={"limit":12,"tab":tab}
+        if kind:data["contentKind"]=kind
+        cur=self.cursor.get(cache_key,{}).get(pg)
+        if pg>1 and not cur:return []
+        if cur:data["cursor"]=cur
+        d=self._api("rank.list",data)
+        nxt=d.get("nextCursor") if isinstance(d,dict) else ""
+        if nxt:self.cursor.setdefault(cache_key,{})[pg+1]=nxt
+        return self._items(d,mode)
+    def _browse(self,cache_key,pg,data,mode="all",need_pic=False,loops=1):
+        cur=self.cursor.get(cache_key,{}).get(pg)
+        if pg>1 and not cur:return []
+        if cur:data["cursor"]=cur
+        seen=self.seen_page.setdefault(cache_key,set());out=[];nxt=""
+        for _ in range(loops):
+            d=self._api("feed.browse",data);nxt=d.get("nextCursor") if isinstance(d,dict) else ""
+            li=self._items(d,mode,need_pic)
+            if not li and d and not d.get("items"):
+                fb=dict({"limit":12,"categorySlug":data.get("categorySlug","")})
+                d=self._api("feed.browse",fb);nxt=d.get("nextCursor") if isinstance(d,dict) else ""
+                li=self._items(d,mode,need_pic)
+            self._fill(out,seen,li)
+            if len(out)>=12 or not nxt:break
+            data["cursor"]=nxt
+        if nxt:self.cursor.setdefault(cache_key,{})[pg+1]=nxt
+        return out
     def _list(self,cache_key="t-5jxcit",pg=1,extra=None):
         pg=int(pg)
         tid=extra.get("tid",cache_key) if extra else cache_key
         ck_map={"t-eb9c3c":"MOVIE","t-k1gwip":"SERIES","t-5jxcit":"SHORT_DRAMA","t-hebbu9":"VARIETY","t-k3onqj":"ANIME"}
-        mp={"t-5jxcit":{"contentKind":"SHORT_DRAMA"},"adult_short":{"tagSlug":"adult"},"normal_short":{"contentKind":"SHORT_DRAMA"},"short_kind":{"contentKind":"SHORT_DRAMA"}}
+        mp={"t-5jxcit":{"contentKind":"SHORT_DRAMA"},"adult_short":{"contentKind":"SHORT_DRAMA"},"normal_short":{"contentKind":"SHORT_DRAMA"},"short_kind":{"contentKind":"SHORT_DRAMA"}}
         if tid in ck_map:mp[tid]={"contentKind":ck_map[tid]}
         if pg==1:self.cursor[cache_key]={};self.seen_page[cache_key]=set()
-        cur=self.cursor.get(cache_key,{}).get(pg)
-        if pg>1 and not cur:return []
-        mode="all" if tid=="adult_short" else "normal" if tid=="normal_short" else "all";seen=self.seen_page.setdefault(cache_key,set());out=[];nxt=""
+        mode="all" if tid=="adult_short" else "normal" if tid=="normal_short" else "all"
         kind=extra.get("kind","") if extra else ""
         if tid in ["recommend","all",""]:
-            d=self._api("feed.recommend",{"limit":12});nxt=d.get("nextCursor") if isinstance(d,dict) else "";li=self._items(d)
-            for x in li:
-                k=x.get("vod_id") or re.sub(r"\s+","",x.get("vod_name",""))
-                if k and k not in seen:seen.add(k);out.append(x)
-        elif tid=="rank":
-            data={"limit":12,"tab":"hot"}
-            if kind:data["contentKind"]=kind
-            if cur:data["cursor"]=cur
-            d=self._api("rank.list",data);nxt=d.get("nextCursor") if isinstance(d,dict) else ""
-            for x in self._items(d):
-                k=x.get("vod_id") or re.sub(r"\s+","",x.get("vod_name",""))
-                if k and k not in seen:seen.add(k);out.append(x)
-        elif tid=="today":
-            data={"limit":12,"sort":"new"}
-            if kind:data["contentKind"]=kind
-            if cur:data["cursor"]=cur
-            for _ in range(8):
-                d=self._api("feed.browse",data);nxt=d.get("nextCursor") if isinstance(d,dict) else ""
-                li=self._items(d)
-                for x in li:
-                    k=x.get("vod_id") or re.sub(r"\s+","",x.get("vod_name",""))
-                    if k and k not in seen:seen.add(k);out.append(x)
-                    if len(out)>=12:break
-                if len(out)>=12 or not nxt:break
-                data["cursor"]=nxt
-        else:
-            base=mp.get(tid,{"categorySlug":tid})
-            cat=extra.get("cat","") if extra else ""
-            region=extra.get("region","") if extra else ""
-            kd=base.get("contentKind","")
-            if cat:
-                data=dict({"limit":12,"categorySlug":cat})
-                if kd:data["contentKind"]=kd
-            elif region:
-                data=dict({"limit":12,"categorySlug":region})
-                if kd:data["contentKind"]=kd
-            else:
-                data=dict({"limit":12},**base)
-            if cur:data["cursor"]=cur
-            loops=8 if tid in ["adult_short","normal_short"] else 1
-            for _ in range(loops):
-                d=self._api("feed.browse",data);nxt=d.get("nextCursor") if isinstance(d,dict) else ""
-                li=self._items(d,mode,tid=="normal_short")
-                if not li and (cat or region) and d and not d.get("items"):
-                    fb=dict({"limit":12,"categorySlug":cat or region})
-                    d=self._api("feed.browse",fb);nxt=d.get("nextCursor") if isinstance(d,dict) else ""
-                    li=self._items(d,mode,tid=="normal_short")
-                for x in li:
-                    k=x.get("vod_id") or re.sub(r"\s+","",x.get("vod_name",""))
-                    if k and k not in seen:seen.add(k);out.append(x)
-                    if len(out)>=12:break
-                if len(out)>=12 or not nxt:break
-                data["cursor"]=nxt
-        if nxt:self.cursor.setdefault(cache_key,{})[pg+1]=nxt
-        return out
+            d=self._api("feed.recommend",{"limit":12})
+            nxt=d.get("nextCursor") if isinstance(d,dict) else ""
+            if nxt:self.cursor.setdefault(cache_key,{})[pg+1]=nxt
+            seen=self.seen_page.setdefault(cache_key,set());out=[]
+            self._fill(out,seen,self._items(d))
+            return out
+        if tid in ["rank","today"]:
+            return self._rank(cache_key,pg,"hot" if tid=="rank" else "new",kind,mode)
+        base=mp.get(tid,{"categorySlug":tid})
+        cat=extra.get("cat","") if extra else ""
+        region=extra.get("region","") if extra else ""
+        kd=base.get("contentKind","")
+        if cat or region:
+            data=dict({"limit":12,"categorySlug":cat or region})
+            if kd:data["contentKind"]=kd
+            return self._browse(cache_key,pg,data,mode,tid=="normal_short",8 if tid in ["adult_short","normal_short"] else 1)
+        if kd:
+            return self._rank(cache_key,pg,"hot",kd,mode)
+        return self._browse(cache_key,pg,dict({"limit":12},**base),mode,tid=="normal_short")
     def homeContent(self,filter):
         cls=[
             {"type_id":"t-5jxcit","type_name":"短剧"},

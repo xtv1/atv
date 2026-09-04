@@ -6,25 +6,25 @@
 "sites":[
      {
 			"key": "acfan",
-			"name": "🐬acFan 🔞[成人]",
+			"name": "🐬acFan 🔞[🔞短剧][成人]",
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/acFan.py"
 		},
         {
 			"key": "acfanh5",
-			"name": "🐬acFanh5 🔞[成人]",
+			"name": "🐬acFanh5 [听画书][成人]",
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/acFanh5.py"
 		},
         {
 			"key": "社区",
-			"name": "💞玩物社区 🔞[短听画书][🔞短剧][成人]",
+			"name": "💞玩物社区 [🔞短剧][成人]",
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/玩物社区.py"
 		},
  {
 			"key": "ad",
-			"name": "🐬艾旦影视.py 有🔞[成人]",
+			"name": "🐬艾旦影视.py 🔞[成人]",
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/艾旦影视.py"
 		},
@@ -52,13 +52,13 @@
 		},
         {
       "key": "夜社.py",
-      "name": "🐬夜社[🔞短剧][短听画书][成人]｜🔞",
+      "name": "🐬夜社[🔞短剧][听画书][成人]｜🔞",
       "type": 3,
       "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/夜社.py"
     },
 	        {
       "key": "牛牛视频",
-      "name": "🐬牛牛视频.py[🔞短剧][短听画书][成人]｜🔞",
+      "name": "🐬牛牛视频.py[🔞短剧][听画书][成人]｜🔞",
       "type": 3,
       "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/牛牛视频.py"
     },
@@ -92,10 +92,16 @@
 		},
                 {
       "key": "有料.py",
-      "name": "🐬有料.py[成人]｜🔞",
+      "name": "🐬有料.py｜🔞[成人][听画书]",
       "type": 3,
       "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/有料.py"
     }, 
+        {
+      "key": "抖阴.py",
+      "name": "🐬抖阴.py[成人]｜🔞",
+      "type": 3,
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/抖阴.py"
+    },
         {
       "key": "小马大车",
       "name": "🐬小马大车.py[成人]｜🔞",
@@ -107,6 +113,12 @@
       "name": "🐬杏吧APP.py🔞[成人]",
       "type": 3,
       "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/杏吧APP.py"
+    },
+        {
+      "key": "杏吧视频.py",
+      "name": "🐬杏吧视频.py🔞[成人]",
+      "type": 3,
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py1/杏吧视频.py"
     },
             {
 			"key": "hdyy",
@@ -257,7 +269,7 @@
     },
 		        {
       "key": "牛牛视频",
-      "name": "🐬牛牛视频.py[🔞短剧][短听画书][成人]｜🔞",
+      "name": "🐬牛牛视频.py[🔞短剧][听画书][成人]｜🔞",
       "type": 3,
       "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/牛牛视频.py"
     },
@@ -293,7 +305,7 @@
     }, 
         {
       "key": "草榴社区",
-      "name": "🐬草榴社区.py[短听画书][成人]｜🔞",
+      "name": "🐬草榴社区.py[听画书][成人]｜🔞",
       "type": 3,
       "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/草榴社区.py"
     },
@@ -329,7 +341,7 @@
 		},
                 {
 			"key": "18av",
-			"name": "🐬18AV.py｜[短听画书][成人]",
+			"name": "🐬18AV.py｜[听画书][成人]",
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/18AV.py"
 		},   
@@ -357,7 +369,7 @@
 			"type": 3,
 			"api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/黄色仓库.py"
 		},
-        {      "key": "one点播",      "name": "🐬one点播4K.py(关梯)[短听画书][成人]｜🔞",      "type": 3,      "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/one.py"    },
+        {      "key": "one点播",      "name": "🐬one点播4K.py(关梯)[听画书][成人]｜🔞",      "type": 3,      "api": "https://ghfast.top/https://raw.githubusercontent.com/YJL20190405/TVBOX/refs/heads/main/py/one.py"    },
 		{
 			"key": "爆片库.py",
 			"name": "🐬爆片库.py｜🔞[成人]",

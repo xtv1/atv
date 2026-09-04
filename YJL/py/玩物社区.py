@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# 发送邮件获得最新地址
+# wanwushequ@gmail.com
+    # 预设备用域名池
 """
 ==================================================
 @Spider Name : WanWuu Spider (Multi-Domain & Auto-Publish Release)
@@ -16,9 +19,6 @@ from base.spider import Spider as BaseSpider
 
 
 class Spider(BaseSpider):
-# 发送邮件获得最新地址
-# wanwushequ@gmail.com
-    # 预设备用域名池
     DOMAINS = [
         "https://tju.bnmdquasi.cc",
         "https://xmu.ezgdtehh.com",
@@ -32,7 +32,6 @@ class Spider(BaseSpider):
         "https://wanwuu.com"
     ]
 
-    # 地址发布页列表
     PUBLISH_PAGES = [
         "https://wanwuu.pages.dev/",
         "https://wanwuu.github.io/",
@@ -61,13 +60,9 @@ class Spider(BaseSpider):
 
         # 动态设置 Referer
         self.headers["Referer"] = f"{self.site_url}/"
-
-        # 预编译正则
         self.u_param_pattern = re.compile(r'encodeURIComponent\("([^"]+)"\)')
         self.u_param_pattern_alt = re.compile(r'u=([a-zA-Z0-9%_\.-]+)')
         self.m3u8_pattern = re.compile(r'(https?://[^"\']+\.m3u8[^"\']*)', re.IGNORECASE)
-
-    # ---------- 域名动态探测与切换核心 ----------
 
     def _get_working_domain(self):
         for domain in self.DOMAINS:
@@ -159,9 +154,6 @@ class Spider(BaseSpider):
         except Exception:
             return ""
 
-    # ============================================================
-    # 36进制转换（packed JS 标准算法）
-    # ============================================================
     def _int_to_base36(self, num):
         if num == 0:
             return '0'
@@ -172,9 +164,6 @@ class Spider(BaseSpider):
             num //= 36
         return result
 
-    # ============================================================
-    # JS字符串转义解析
-    # ============================================================
     def _unescape_js_string(self, s):
         result = []
         i = 0
@@ -219,9 +208,6 @@ class Spider(BaseSpider):
                 i += 1
         return ''.join(result)
 
-    # ============================================================
-    # 通用 eval packed JS 解码器（Dean Edwards Packer）
-    # ============================================================
     def _decode_packed_js(self, html):
         if not html:
             return None
@@ -285,31 +271,21 @@ class Spider(BaseSpider):
 
         return template
 
+    def _find_u_param(self, text):
+        m = self.u_param_pattern.search(text)
+        if m:
+            return m.group(1)
+        m = self.u_param_pattern_alt.search(text)
+        return unquote(m.group(1)) if m else ""
+
     def _extract_play_url(self, html, page_url=""):
         if not html:
             return ""
-
-        u_param = ""
-
-        u_match = self.u_param_pattern.search(html)
-        if u_match:
-            u_param = u_match.group(1)
-        else:
-            u_alt = self.u_param_pattern_alt.search(html)
-            if u_alt:
-                u_param = unquote(u_alt.group(1))
-
+        u_param = self._find_u_param(html)
         if not u_param:
             decoded_html = self._decode_packed_js(html)
             if decoded_html:
-                u_match = self.u_param_pattern.search(decoded_html)
-                if u_match:
-                    u_param = u_match.group(1)
-                else:
-                    u_alt = self.u_param_pattern_alt.search(decoded_html)
-                    if u_alt:
-                        u_param = unquote(u_alt.group(1))
-
+                u_param = self._find_u_param(decoded_html)
         if not u_param:
             b64_match = re.search(
                 r'["\']([A-Za-z0-9_\-]{10,}/[A-Za-z0-9_\-]{5,}\+[A-Za-z0-9_\-]{5,}/[A-Za-z0-9_\-]{10,}\+[A-Za-z0-9_\-]{1,}=?)["\']',
@@ -317,7 +293,6 @@ class Spider(BaseSpider):
             )
             if b64_match:
                 u_param = b64_match.group(1)
-
         if not u_param:
             return ""
 
@@ -380,8 +355,6 @@ class Spider(BaseSpider):
             pass
 
         return ""
-
-    # ---------- 业务核心方法 ----------
 
     def homeContent(self, filter):
         result = {}
@@ -566,25 +539,16 @@ class Spider(BaseSpider):
         soup = BeautifulSoup(html, 'html.parser')
 
         if "/novels/" in vod_id:
-            title_el = soup.select_one('h1.post-item-title, h1.text-xl, h1')
-            title = title_el.get_text(strip=True) if title_el else "未知标题"
-            desc_el = soup.select_one('.post-item-desc, .author, .author-info')
-            vod_remarks = desc_el.get_text(strip=True) if desc_el else "图文"
-            raw_pic = self._extract_pic_from_soup(soup)
-            pic = self._format_pic_url(raw_pic)
-
-            article = soup.select_one('article.markdown-body, article, .post-content')
-            paragraphs = [p.get_text(strip=True) for p in article.find_all('p') if p.get_text(strip=True)] if article else []
-            content_text = '\n\n'.join(paragraphs) if paragraphs else (article.get_text(strip=True) if article else "")
-
+            title, content_text, pic, vod_remarks = self._novel_page(soup)
             vod = {
                 "vod_id": vod_id,
                 "vod_name": title,
                 "vod_pic": pic,
                 "vod_remarks": vod_remarks,
                 "vod_content": content_text,
-                "vod_play_from": "WanWuu-Post",
-                "vod_play_url": f"查看全文${urljoin(self.site_url, vod_id)}",
+                "vod_tag": "text",
+                "vod_play_from": "小说",
+                "vod_play_url": "阅读$novel_%s" % vod_id,
             }
             return {"list": [vod]}
 
@@ -633,12 +597,46 @@ class Spider(BaseSpider):
         videos = self._parse_video_list(html)
         return {"list": videos}
 
+    def isVideoFormat(self, url):
+        u = str(url or "")
+        if u.startswith(("novel://", "pics://")) or "/novels/" in u or u.startswith("novel_"):
+            return False
+        return ".m3u8" in u or u.endswith(".mp4")
+
+    def _novel_page(self, soup):
+        title_el = soup.select_one('h1.post-item-title, h1.text-xl, h1')
+        title = title_el.get_text(strip=True) if title_el else "未知标题"
+        desc_el = soup.select_one('.post-item-desc, .author, .author-info')
+        vod_remarks = desc_el.get_text(strip=True) if desc_el else "小说"
+        raw_pic = self._extract_pic_from_soup(soup)
+        pic = self._format_pic_url(raw_pic)
+        article = soup.select_one('article.markdown-body, article, .post-content')
+        paragraphs = [p.get_text(strip=True) for p in article.find_all('p') if p.get_text(strip=True)] if article else []
+        content_text = '\n\n'.join(paragraphs) if paragraphs else (article.get_text(strip=True) if article else "")
+        return title, content_text, pic, vod_remarks
+
+    def _play_novel(self, path, title=""):
+        html = self._fetch_html_safe(path)
+        if not html:
+            return {"parse": 0, "url": "", "header": ""}
+        soup = BeautifulSoup(html, 'html.parser')
+        name, content_text, _pic, _rem = self._novel_page(soup)
+        payload = json.dumps({"title": title or name or "阅读", "content": content_text}, ensure_ascii=False)
+        return {"parse": 0, "url": "novel://" + payload, "header": ""}
+
     def playerContent(self, flag, id, vipFlags):
         play_headers = {
             "User-Agent": self.headers["User-Agent"],
             "Referer": f"{self.site_url}/",
             "Origin": self.site_url,
         }
+
+        s = str(id or "")
+        if s.startswith("novel://"):
+            return {"parse": 0, "url": s, "header": ""}
+        if s.startswith("novel_") or "/novels/" in s:
+            path = s[6:] if s.startswith("novel_") else s
+            return self._play_novel(path, str(flag or "阅读"))
 
         if "WanWuu-Sniff" in flag or not (id.endswith(".m3u8") or id.endswith(".mp4")):
             if "/posts/" in id or "/videos/" in id:
@@ -663,7 +661,11 @@ class Spider(BaseSpider):
             "header": json.dumps(play_headers),
         }
 
-    # ==================== HTML 解析辅助函数 ====================
+    def _item(self, vod_id, vod_name, vod_pic="", vod_remarks="", vod_tag=""):
+        d = {"vod_id": vod_id, "vod_name": vod_name, "vod_pic": vod_pic, "vod_remarks": vod_remarks}
+        if vod_tag:
+            d["vod_tag"] = vod_tag
+        return d
 
     def _parse_hot_tags(self, html):
         tags = []
@@ -688,13 +690,7 @@ class Spider(BaseSpider):
             vod_name = tag_name.lstrip('#').strip()
 
             seen.add(vod_id)
-            tags.append({
-                "vod_id": vod_id,
-                "vod_name": f"🏷️ {vod_name}",
-                "vod_pic": "",
-                "vod_remarks": "热门标签",
-                "vod_tag": "folder",
-            })
+            tags.append(self._item(vod_id, vod_name, vod_remarks="热门标签", vod_tag="folder"))
 
         return tags
 
@@ -732,57 +728,12 @@ class Spider(BaseSpider):
 
             if vod_id and vod_name:
                 seen.add(vod_id)
-                sets.append({
-                    "vod_id": vod_id,
-                    "vod_name": vod_name,
-                    "vod_pic": vod_pic,
-                    "vod_remarks": vod_remarks,
-                    "vod_tag": "folder",
-                })
+                sets.append(self._item(vod_id, vod_name, vod_pic, vod_remarks, "folder"))
 
         return sets
 
     def _parse_movieset_detail_videos(self, html):
-        videos = []
-        if not html:
-            return videos
-
-        soup = BeautifulSoup(html, 'html.parser')
-        items = soup.select('li.group, li, div.video-item')
-        seen = set()
-
-        for item in items:
-            a_tag = item.find('a', href=re.compile(r'^/(videos|ai|porn|posts)/'))
-            if not a_tag:
-                continue
-
-            vod_id = self._clean_vod_id(a_tag.get('href'))
-            if not vod_id or vod_id in seen:
-                continue
-
-            img_tag = item.find('img')
-            vod_name = ""
-            if img_tag and img_tag.get('alt'):
-                vod_name = img_tag.get('alt').strip()
-            if not vod_name:
-                title_el = item.select_one('.line-clamp-2, line-clamp-1, h2, h3, .title')
-                vod_name = title_el.get_text(strip=True) if title_el else ""
-
-            raw_pic = self._extract_pic_from_node(item)
-            vod_pic = self._format_pic_url(raw_pic)
-
-            vod_remarks = self._extract_video_remarks(item)
-
-            if vod_id and vod_name:
-                seen.add(vod_id)
-                videos.append({
-                    "vod_id": vod_id,
-                    "vod_name": vod_name,
-                    "vod_pic": vod_pic,
-                    "vod_remarks": vod_remarks,
-                })
-
-        return videos
+        return self._parse_video_list(html)
 
     def _parse_post_list(self, html):
         posts = []
@@ -806,16 +757,13 @@ class Spider(BaseSpider):
                 continue
 
             href = a_tag.get('href', '').strip()
-            clean_href = href.rstrip('/')
-
             excluded_paths = {
-                '/posts', '/posts/all', 
-                '/posts/wanwu-changliao', '/posts/lianzu-yuanchuang', 
+                '/posts', '/posts/all',
+                '/posts/wanwu-changliao', '/posts/lianzu-yuanchuang',
                 '/posts/doum-tiantang', '/posts/nvwang-tiandi'
             }
-            if clean_href in excluded_paths or not re.search(r'/\d+', href):
-                if clean_href in excluded_paths:
-                    continue
+            if href.rstrip('/') in excluded_paths:
+                continue
 
             vod_id = self._clean_vod_id(href)
             if not vod_id or vod_id in seen:
@@ -840,12 +788,7 @@ class Spider(BaseSpider):
                 vod_remarks = "社区帖子"
 
             seen.add(vod_id)
-            posts.append({
-                "vod_id": vod_id,
-                "vod_name": vod_name,
-                "vod_pic": vod_pic,
-                "vod_remarks": vod_remarks,
-            })
+            posts.append(self._item(vod_id, vod_name, vod_pic, vod_remarks))
 
         return posts
 
@@ -877,61 +820,33 @@ class Spider(BaseSpider):
 
             if vod_id and vod_name:
                 seen.add(vod_id)
-                novels.append({
-                    "vod_id": vod_id,
-                    "vod_name": vod_name,
-                    "vod_pic": vod_pic,
-                    "vod_remarks": "小说",
-                })
+                novels.append(self._item(vod_id, vod_name, vod_pic, "小说"))
 
         return novels
 
-    # ==================== 时间优先拼接（时间作主要副标题，角标作后缀） ====================
-
     def _extract_video_remarks(self, item):
-        """将时间设为主显示（副标题），分类与角标紧随其后"""
         time_text = ""
         badge_tags = []
-
-        # 1. 优先提取时间（例如："29:09"）
         duration_el = item.select_one('div[class*="bottom-0"] div, .duration, .time, .opacity-50')
         if duration_el:
             time_text = duration_el.get_text(strip=True)
-
-        # 兜底：如果选择器没找到，抓取符合 \d+:\d+ 的文字
         if not time_text or not re.search(r'\d+:\d+', time_text):
-            all_text = item.get_text()
-            match = re.search(r'\b\d{1,2}:\d{2}(?::\d{2})?\b', all_text)
+            match = re.search(r'\b\d{1,2}:\d{2}(?::\d{2})?\b', item.get_text())
             if match:
                 time_text = match.group(0)
-
-        # 2. 提取角标（例如："直播回放"）
         badge_el = item.select_one('div[class*="top-0"], div[class*="absolute"][class*="left-0"], .badge, .label')
         if badge_el:
             text = badge_el.get_text(strip=True)
             if text and len(text) <= 8 and text != time_text:
                 badge_tags.append(text)
-
-        # 3. 提取其他辅助分类标签
-        sub_a_tags = item.select('.dx-subtitle a, div[class*="subtitle"] a, a[href*="/search/"]')
-        for a in sub_a_tags:
+        for a in item.select('.dx-subtitle a, div[class*="subtitle"] a, a[href*="/search/"]'):
             t = a.get_text(strip=True)
             if t and t != time_text and t not in badge_tags:
                 badge_tags.append(t)
             if len(badge_tags) >= 2:
                 break
-
-        # 4. 拼接组合：[时间] | [角标1] | [角标2]
-        result_parts = []
-        if time_text:
-            result_parts.append(time_text)
-        
-        result_parts.extend(badge_tags)
-
-        if result_parts:
-            return " | ".join(result_parts)
-
-        return "HD"
+        parts = ([time_text] if time_text else []) + badge_tags
+        return " | ".join(parts) if parts else "HD"
 
     def _parse_video_list(self, html):
         videos = []
@@ -964,22 +879,12 @@ class Spider(BaseSpider):
 
             raw_pic = self._extract_pic_from_node(item)
             vod_pic = self._format_pic_url(raw_pic)
-
-            # 调用调整后的提取函数
             vod_remarks = self._extract_video_remarks(item)
-
             if vod_id and vod_name:
                 seen.add(vod_id)
-                videos.append({
-                    "vod_id": vod_id,
-                    "vod_name": vod_name,
-                    "vod_pic": vod_pic,
-                    "vod_remarks": vod_remarks,
-                })
+                videos.append(self._item(vod_id, vod_name, vod_pic, vod_remarks))
 
         return videos
-
-    # ==================== 图片代理 & 解密模块 ====================
 
     def _clean_vod_id(self, href):
         if not href:
