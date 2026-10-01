@@ -13,6 +13,7 @@ Typecho Mirages 主题 + DPlayer（data-config JSON）
 import re
 import json
 import base64
+import hashlib
 import urllib.request
 import urllib.parse
 import ssl
@@ -21,6 +22,8 @@ try:
     from base.spider import Spider as BaseSpider
 except Exception:
     BaseSpider = object
+
+_IMG_CACHE = {}
 
 
 class Spider(BaseSpider):
@@ -38,9 +41,6 @@ class Spider(BaseSpider):
             "https://51aw.com/",
         ]
         self._host_done = False
-        # 图片解密代理（站点图片 AES-CBC 加密，TVBox 无法直接显示）
-        # 公网域名（CF 代理到本机 7800）——TVBox 在外网也能用
-        self.img_proxy = "https://py.fzcrym.link:1314/bk51_img?u="
         # ⚠️ 必须完整 Chrome UA——简短 UA 服务器截断正文，VIP 视频直接缺失
         self.ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         self.header = {
@@ -135,14 +135,7 @@ class Spider(BaseSpider):
             if tm:
                 title = self.clean(tm.group(1))
 
-        pm = re.search(r"loadBannerDirect\('([^']+\.(?:jpe?g|png|webp)[^']*)'", html)
-        if not pm:
-            # 详情页封面: itemprop image（正文头图）
-            pm = re.search(r'itemprop="image"\s+content="([^"]+)"', html)
-        if not pm:
-            pm = re.search(r"loadImage\([\"'](https?[^\")]+\.(?:jpe?g|png|webp))", html)
-        if pm and "social-default" not in pm.group(1) and "logo" not in pm.group(1):
-            pic = self.fix_url(pm.group(1).replace("\\/", "/"))
+        pic = self._extract_pic(html)
 
         # 简介: og:description / meta description
         im = re.search(r'name="description"\s+content="([^"]+)"', html)
@@ -236,7 +229,25 @@ class Spider(BaseSpider):
         }
 
     def localProxy(self, param):
-        return [200, "video/MP2T", "", ""]
+        try:
+            type_ = (param or {}).get("type")
+            url = (param or {}).get("url") or ""
+            if type_ == "cache":
+                key = (param or {}).get("key")
+                content = _IMG_CACHE.get(key)
+                if content:
+                    return [200, "image/jpeg", content]
+                return [404, "text/plain", b"Expired"]
+            if type_ != "img":
+                return [404, "text/plain", b""]
+            real = self._d64(url) if not str(url).startswith("http") else url
+            raw = self.fetch(real, timeout=15, binary=True)
+            if not raw:
+                return [404, "text/plain", b""]
+            data = self._aesimg(raw)
+            return [200, "image/jpeg", data]
+        except Exception:
+            return [404, "text/plain", b""]
 
     # ---------- 内部 ----------
     def resolve_host(self):
@@ -308,16 +319,21 @@ class Spider(BaseSpider):
             return False
         return "post-card" in h
 
-    def fetch(self, url, hdr=None, timeout=15):
+    def fetch(self, url, hdr=None, timeout=15, binary=False):
+        if not url:
+            return b"" if binary else ""
         headers = self.header
-        if hdr:
+        if hdr or binary:
             headers = dict(self.header)
-            headers.update(hdr)
+            if hdr:
+                headers.update(hdr)
+            if binary:
+                headers["Accept"] = "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"
         try:
             import requests
             r = requests.get(url, headers=headers, timeout=timeout, verify=False)
-            if r.status_code == 200 and r.text:
-                return r.text
+            if r.status_code == 200 and r.content:
+                return r.content if binary else r.text
         except Exception:
             pass
         try:
@@ -326,24 +342,119 @@ class Spider(BaseSpider):
                 resp = urllib.request.urlopen(req, context=self.ctx, timeout=timeout)
             except TypeError:
                 resp = urllib.request.urlopen(req, timeout=timeout)
-            return resp.read().decode("utf-8", errors="replace")
+            data = resp.read() or b""
+            return data if binary else data.decode("utf-8", errors="replace")
+        except Exception:
+            return b"" if binary else ""
+
+    def _aesimg(self, data):
+        if not data or len(data) < 16:
+            return data or b""
+        if data[:2] == b"\xff\xd8" or data[:8] == b"\x89PNG\r\n\x1a\n":
+            return data
+        try:
+            from Crypto.Cipher import AES
+        except Exception:
+            try:
+                from Cryptodome.Cipher import AES
+            except Exception:
+                return data
+        keys = [
+            (b"f5d965df75336270", b"97b60394abc2fbe1"),
+            (b"75336270f5d965df", b"abc2fbe197b60394"),
+        ]
+
+        def _unpad(buf):
+            if not buf:
+                return buf
+            n = buf[-1]
+            if 1 <= n <= 16:
+                return buf[:-n]
+            return buf
+
+        def _ok(buf):
+            return (buf[:2] == b"\xff\xd8"
+                    or buf[:8] == b"\x89PNG\r\n\x1a\n"
+                    or buf[:6] in (b"GIF89a", b"GIF87a")
+                    or (buf[:4] == b"RIFF" and buf[8:12] == b"WEBP"))
+
+        for k, v in keys:
+            try:
+                dec = _unpad(AES.new(k, AES.MODE_CBC, v).decrypt(data))
+                if _ok(dec):
+                    return dec
+            except Exception:
+                pass
+            try:
+                dec = _unpad(AES.new(k, AES.MODE_ECB).decrypt(data))
+                if _ok(dec):
+                    return dec
+            except Exception:
+                pass
+        return data
+
+    def _e64(self, text):
+        return base64.b64encode(str(text or "").encode()).decode()
+
+    def _d64(self, text):
+        return base64.b64decode(str(text or "").encode()).decode()
+
+    def _proxy_base(self):
+        try:
+            return self.getProxyUrl() if hasattr(self, "getProxyUrl") else ""
         except Exception:
             return ""
 
-    def fix_url(self, u):
-        if not u:
+    def _proc_url(self, url):
+        if not url:
             return ""
-        u = u.strip()
-        if u.startswith("//"):
-            u = "https:" + u
-        elif u.startswith("/"):
-            u = self.host + u
-        if not (u.startswith("http://") or u.startswith("https://")):
-            return u
-        # 站点加密图片（xustgq.cn）走解密代理；其他图直连
-        if "xustgq.cn" in u:
-            return self.img_proxy + urllib.parse.quote(u, safe="")
-        return u
+        url = url.strip().strip("'\" ").replace("\\/", "/")
+        if url.startswith("data:"):
+            try:
+                _, b64_str = url.split(",", 1)
+                raw = base64.b64decode(b64_str)
+                if not (raw.startswith(b"\xff\xd8") or raw.startswith(b"\x89PNG") or raw.startswith(b"GIF8")):
+                    raw = self._aesimg(raw)
+                key = hashlib.md5(raw).hexdigest()
+                _IMG_CACHE[key] = raw
+                base = self._proxy_base()
+                if not base:
+                    return ""
+                return "%s&type=cache&key=%s" % (base, key)
+            except Exception:
+                return ""
+        if url.startswith("//"):
+            url = "https:" + url
+        elif url.startswith("/"):
+            url = self.host + url
+        elif not (url.startswith("http://") or url.startswith("https://")):
+            url = self.host + "/" + url
+        base = self._proxy_base()
+        if not base:
+            return ""
+        return "%s&url=%s&type=img" % (base, self._e64(url))
+
+    def _extract_pic(self, html):
+        if not html:
+            return ""
+        html = html.replace("&quot;", '"').replace("&apos;", "'").replace("&amp;", "&")
+        m = re.search(r"loadBannerDirect\(['\"]([^'\"]+)['\"]", html)
+        if m and "logo" not in m.group(1) and "social-default" not in m.group(1) and "default" not in m.group(1):
+            return self._proc_url(m.group(1))
+        m = re.search(r'itemprop="image"\s+content="([^"]+)"', html)
+        if m and "logo" not in m.group(1) and "social-default" not in m.group(1):
+            return self._proc_url(m.group(1))
+        if "data:image" in html:
+            m = re.search(r"(data:image/[a-zA-Z0-9+/=;,]+)", html)
+            if m:
+                return self._proc_url(m.group(1))
+        m = re.search(r"(https?://[^\"'\s)]+\.(?:jpg|png|jpeg|webp))", html, re.I)
+        if m and "logo" not in m.group(1) and "social-default" not in m.group(1) and "default" not in m.group(1):
+            return self._proc_url(m.group(1))
+        m = re.search(r"url\s*\(\s*['\"]?([^\"')]+)['\"]?\s*\)", html, re.I)
+        if m and "logo" not in m.group(1):
+            return self._proc_url(m.group(1))
+        return ""
 
     def clean(self, s):
         return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", s or "")).strip()
@@ -372,10 +483,7 @@ class Spider(BaseSpider):
                     title = self.clean(tm.group(1))
             if not title:
                 continue
-            pic = ""
-            pm = re.search(r"loadBannerDirect\('([^']+)'", b)
-            if pm:
-                pic = self.fix_url(pm.group(1))
+            pic = self._extract_pic(b)
             items.append({
                 "vod_id": vid,
                 "vod_name": title,

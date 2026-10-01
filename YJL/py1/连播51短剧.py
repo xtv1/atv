@@ -40,14 +40,12 @@ def _doh_resolve(hostname):
     _doh_list = [
         'https://doh.pub/dns-query',
         'https://dns.alidns.com/resolve',
-        'https://dns.google/resolve',
-        'https://cloudflare-dns.com/dns-query',
     ]
     picked = []
     for _u in _doh_list:
         try:
             _r = requests.get(_u, params={'name': hostname, 'type': 'A'},
-                              headers={'accept': 'application/dns-json'}, timeout=6, verify=False)
+                              headers={'accept': 'application/dns-json'}, timeout=2, verify=False)
             _j = _r.json()
             for _a in _j.get('Answer', []):
                 if _a.get('type') == 1 and _a.get('data'):
@@ -75,14 +73,9 @@ def _doh_pin_domain(hostname, fallback=None):
         _now = time.time()
         if hostname in _PIN_MAP and _now - _PIN_TIME.get(hostname, 0) < _PIN_CACHE_TTL[0]:
             return
-        picked = _doh_resolve(hostname)
-        if not picked and fallback:
-            picked = list(fallback)
-        elif fallback:
-            picked = list(dict.fromkeys(list(fallback) + picked))
-        if picked:
-            _PIN_MAP[hostname] = picked
-            _PIN_TIME[hostname] = _now
+        picked = list(fallback) if fallback else _doh_resolve(hostname)
+        _PIN_MAP[hostname] = picked
+        _PIN_TIME[hostname] = _now
     except Exception:
         pass
 
@@ -154,7 +147,8 @@ class Spider(Spider):
                         fallback=["144.7.103.53", "220.181.181.205", "43.169.25.54"])
         _doh_pin_domain("dx.cqjuyl.cn",
                         fallback=["123.125.246.130", "113.200.43.43"])
-        _doh_pin_domain("pic.xustgq.cn")
+        _doh_pin_domain("pic.xustgq.cn",
+                        fallback=["43.141.52.49"])
 
     def _create_session(self):
         s = requests.Session()
@@ -165,7 +159,7 @@ class Spider(Spider):
     def _ensure_oauth(self):
         try:
             _pin_url_host(self.host + "/")
-            r = self.session.get(self.host + "/", timeout=15)
+            r = self.session.get(self.host + "/", timeout=5)
             self.oauth_id = r.cookies.get("OAUTH_ID", "")
         except Exception:
             self.oauth_id = ""
@@ -175,7 +169,7 @@ class Spider(Spider):
         故每次初始化尽量同步一次;失败时保留内置默认值兜底。"""
         try:
             r = self.session.post(self.api_host + "/api/home/contentOptions",
-                                  data={}, headers=self.headers, timeout=15)
+                                  data={}, headers=self.headers, timeout=5)
             j = r.json()
             if j.get("errcode") != 0 or not j.get("data"):
                 return
@@ -492,7 +486,7 @@ class Spider(Spider):
             if not url:
                 continue
             title = item.get("episode_title") or ("第%d集" % (i + 1))
-            episodes.append("%s$%s@%d" % (title, pid, i))
+            episodes.append("%s$%s" % (title, url))
         vod_play_url = "#".join(episodes)
         remarks = ""
         if episodes:
@@ -519,22 +513,9 @@ class Spider(Spider):
     def playerContent(self, flag, id, vipFlags):
         val = str(id).split("$")[-1]
         if val.startswith("http"):
-            return {"playUrl": "", "url": val, "parse": 0, "header": self.headers, "position": "0"}
-        if "@" in val:
-            try:
-                pid, idx = val.rsplit("@", 1)
-                idx = int(idx)
-                d = self._fetch_detail(pid)
-                eps = d.get("episodeAll") or []
-                if 0 <= idx < len(eps) and isinstance(eps[idx], dict):
-                    url = eps[idx].get("video_url") or eps[idx].get("video_url_h265") or ""
-                    if url:
-                        _pin_url_host(url)
-                        b = self._proxy_base()
-                        return {"playUrl": "", "url": b + "type=m3u8&url=" + quote(url, safe=""),
-                                "parse": 0, "header": self.headers, "position": "0"}
-            except Exception as e:
-                print("[51duanju] player err:", e)
+            b = self._proxy_base()
+            return {"playUrl": "", "url": b + "type=m3u8&url=" + quote(val, safe=""),
+                    "parse": 0, "header": self.headers, "position": "0"}
         return {"playUrl": "", "msg": "无效的播放地址: %s" % val}
 
     def localProxy(self, params):
@@ -545,7 +526,7 @@ class Spider(Spider):
                 if not u:
                     return [404, "text/plain", "not found"]
                 _pin_url_host(u)
-                r = self.session.get(u, headers=self.headers, timeout=20)
+                r = self.session.get(u, headers=self.headers, timeout=(3, 8))
                 if r.status_code != 200:
                     return [404, "text/plain", "not found"]
                 if pt == "m3u8":
@@ -601,7 +582,7 @@ class Spider(Spider):
 
     def _html(self, url):
         _pin_url_host(url)
-        r = self.session.get(url, timeout=15)
+        r = self.session.get(url, timeout=8)
         return r.text
 
 # ===== PAGE_PLAYLIST_START =====
@@ -727,28 +708,63 @@ def _pl_install(_C):
         self._src_cache[vid] = sources
         return sources
 
+    def _prefetch_src(self, items, keep_vid, limit=10):
+        _ensure(self)
+        unknown = []
+        for it in items or []:
+            iid = str(it.get("vod_id") or "")
+            if not iid or iid == str(keep_vid) or iid in self._src_cache:
+                continue
+            unknown.append(iid)
+            if len(unknown) >= limit:
+                break
+        if not unknown:
+            return
+        ex = None
+        try:
+            from concurrent.futures import ThreadPoolExecutor, wait
+            ex = ThreadPoolExecutor(max_workers=min(4, len(unknown)))
+            futs = [ex.submit(_load_src, self, iid) for iid in unknown]
+            wait(futs, timeout=8)
+        except Exception:
+            for iid in unknown[:4]:
+                try:
+                    _load_src(self, iid)
+                except Exception:
+                    pass
+        finally:
+            if ex:
+                try:
+                    ex.shutdown(wait=False)
+                except Exception:
+                    pass
+
     def _item_parts(self, it, src_idx, current_sources, current_vid):
         iid = str(it.get("vod_id") or "")
         if not iid:
             return []
         name = _clean(it.get("vod_name") or iid) or iid
         if iid == str(current_vid):
-            eps = []
-            if current_sources:
-                if src_idx < len(current_sources) and current_sources[src_idx][1]:
-                    eps = current_sources[src_idx][1]
-                else:
-                    eps = current_sources[0][1]
-            if len(eps) > 1:
-                out = []
-                for i, (en, u) in enumerate(eps):
-                    label = _clean("%s %s" % (name, en or ("%02d" % (i + 1))))
-                    out.append("%s$%s" % (label, u))
-                return out
-            if eps:
-                return ["%s$%s" % (name, eps[0][1])]
+            sources = current_sources
+        else:
+            sources = self._src_cache.get(iid) or []
+        eps = []
+        if sources:
+            if src_idx < len(sources) and sources[src_idx][1]:
+                eps = sources[src_idx][1]
+            else:
+                eps = sources[0][1]
+        if len(eps) > 1:
+            out = []
+            for i, (en, u) in enumerate(eps):
+                label = _clean("%s %s" % (name, en or ("%02d" % (i + 1))))
+                out.append("%s$%s" % (label, u))
+            return out
+        if eps and (iid == str(current_vid) or (eps[0][1] and not str(eps[0][1]).startswith("nid:"))):
+            return ["%s$%s" % (name, eps[0][1])]
+        if iid == str(current_vid):
             return ["%s$nid:%s" % (name, _enc(iid))]
-        return ["%s$nid:%s" % (name, _enc(iid))]
+        return []
 
     def _apply_playlist(self, vid, vod, items):
         sources = _split_sources(vod)
@@ -767,6 +783,7 @@ def _pl_install(_C):
             plist.append(it)
         if not plist:
             return vod
+        _prefetch_src(self, plist, vid)
         if not sources:
             sources = [("线路1", [("播放", "nid:%s" % _enc(vid))])]
         play_from, play_urls = [], []
@@ -923,6 +940,7 @@ def _pl_install(_C):
 
     _C._pl_call_detail = _call_detail
     _C._pl_load_src = _load_src
+    _C._pl_prefetch_src = _prefetch_src
     _C._pl_item_parts = _item_parts
     _C._pl_apply_playlist = _apply_playlist
     if _orig_init:

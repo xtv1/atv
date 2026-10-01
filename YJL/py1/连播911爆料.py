@@ -1,14 +1,5 @@
 # -*- coding: utf-8 -*-
-# !/usr/bin/python发送任意消息到邮箱 911blcgw@gmail.com
-"""
-@header({
-  searchable: 1,
-  filterable: 1,
-  quickSearch: 1,
-  title: '911爆料网',
-  lang: 'hipy'
-})
-"""
+# 回家邮箱 911blcgw@gmail.com，https://telegram.me/cgblw911
 import sys
 import re
 import json
@@ -60,26 +51,11 @@ except ImportError:
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# ===== DNS 污染防护:DoH 域名钉扎 + 静态 IP 池兜底 =====
 _PIN_MAP = {}
 _PIN_INSTALLED = [False]
 _POISON_IP_PREFIX = ('31.13.94.', '31.13.95.', '75.126.', '157.240.')
-_PIN_CACHE_TTL = [1800]
+_PIN_CACHE_TTL = 1800
 _PIN_TIME = {}
-
-# 实测可达的真实 IP 池:主站/播放/图片域名,设备侧 DNS 被劫持时绕过污染
-_STATIC_IP_POOL = {
-    '911bla.com': ['104.21.8.173', '172.67.157.201'],
-    '911bl16.com': ['43.228.232.202', '43.230.113.205', '43.230.114.206', '43.228.233.203', '43.230.112.204'],
-    '911bl.com': ['43.228.233.203', '43.228.232.202', '43.230.113.205', '43.230.114.206', '43.230.112.204'],
-    'd10cq29fdobmmg.cloudfront.net': ['13.32.32.194', '13.32.32.49', '13.32.32.58', '13.32.32.169'],
-    'catch.belwfufv.cc': ['3.175.214.82', '3.175.214.128', '3.175.214.30'],
-    'carry.cyepzjnb.com': ['13.35.190.44', '13.35.190.5', '13.35.190.13', '13.35.190.85'],
-    'admire.cyepzjnb.com': ['13.35.190.13', '13.35.190.85', '13.35.190.44', '13.35.190.5'],
-    'op.etbjf.cn': ['122.188.57.53', '116.162.172.54', '180.178.234.61', '180.178.234.60', '180.178.234.59'],
-    'as.oolrvd.cn': ['43.168.60.46', '43.152.14.61', '43.175.118.114', '43.175.120.27', '43.168.62.60'],
-    'pic.uforxk.cn': ['36.155.170.198', '43.175.44.52', '43.174.128.40'],
-}
 
 
 def _install_pin():
@@ -98,9 +74,7 @@ def _install_pin():
 
 
 def _ip_alive(ip, port=443, timeout=1.0):
-    """快速 TCP 探测,过滤失效 IP。仅用于少量候选时挑可用项。"""
     try:
-        socket.setdefaulttimeout(timeout)
         c = socket.create_connection((ip, port), timeout=timeout)
         c.close()
         return True
@@ -109,23 +83,20 @@ def _ip_alive(ip, port=443, timeout=1.0):
 
 
 def _doh_resolve(hostname):
-    _doh_list = [
+    picked = []
+    for _u in (
         'https://cloudflare-dns.com/dns-query',
         'https://dns.google/resolve',
         'https://doh.pub/dns-query',
         'https://dns.alidns.com/resolve',
-    ]
-    picked = []
-    for _u in _doh_list:
+    ):
         try:
             _r = requests.get(_u, params={'name': hostname, 'type': 'A'},
                               headers={'accept': 'application/dns-json'}, timeout=2, verify=False)
-            _j = _r.json()
-            for _a in _j.get('Answer', []):
-                if _a.get('type') == 1 and _a.get('data'):
-                    _d = _a['data']
-                    if _d and not _d.startswith('0.') and not _d.startswith(_POISON_IP_PREFIX):
-                        picked.append(_d)
+            for _a in _r.json().get('Answer', []):
+                _d = _a.get('data') if _a.get('type') == 1 else ''
+                if _d and not _d.startswith('0.') and not _d.startswith(_POISON_IP_PREFIX):
+                    picked.append(_d)
             if picked:
                 break
         except Exception:
@@ -135,42 +106,18 @@ def _doh_resolve(hostname):
     return picked
 
 
-def _doh_pin_domain(hostname, fallback=None):
-    """国内 DNS 污染时,通过 DoH 获取真实 IP,并钉扎域名解析,绕过被劫持的系统 DNS。
-    静态 IP 池优先且即时生效:有静态池的域名直接钉扎,DoH 仅作后台异步补充。"""
+def _doh_pin_domain(hostname):
     try:
         if not hostname:
             return
         _install_pin()
-        _now = time.time()
-        if hostname in _PIN_MAP and _now - _PIN_TIME.get(hostname, 0) < _PIN_CACHE_TTL[0]:
-            return
-        picked = list(_STATIC_IP_POOL.get(hostname, []))
-        if picked:
-            _PIN_MAP[hostname] = picked
-            _PIN_TIME[hostname] = _now
-            _doh_last = _PIN_TIME.get(hostname + ":doh", 0)
-            if _doh_last and _now - _doh_last > 600:
-                _PIN_TIME[hostname + ":doh"] = _now
-                try:
-                    def _doh_refresh(_hn, _pk):
-                        try:
-                            _dh = _doh_resolve(_hn)
-                            if _dh:
-                                _PIN_MAP[_hn] = list(dict.fromkeys(_pk + _dh))
-                        except Exception:
-                            pass
-
-                    threading.Thread(target=_doh_refresh, args=(hostname, picked), daemon=True).start()
-                except Exception:
-                    pass
+        now = time.time()
+        if hostname in _PIN_MAP and now - _PIN_TIME.get(hostname, 0) < _PIN_CACHE_TTL:
             return
         picked = _doh_resolve(hostname)
-        if fallback:
-            picked = list(dict.fromkeys(list(fallback) + picked))
         if picked:
             _PIN_MAP[hostname] = picked
-            _PIN_TIME[hostname] = _now
+            _PIN_TIME[hostname] = now
     except Exception:
         pass
 
@@ -183,7 +130,6 @@ def _pin_url_host(url):
     except Exception:
         pass
 
-# 全局内存短时缓存 (解决客户端并发请求/预加载/反复切页卡顿)
 CACHE_STORE = {}
 CACHE_LOCK = threading.Lock()
 
@@ -228,7 +174,6 @@ class Spider(BaseSpider):
         "所有标签", "关于我们", "官方tg群", "官方推特", "ai换脸脱衣", "广告", "商务合作"
     }
 
-    # 网站主导航的分组分类 (主分类 -> 子分类), 与网页排序一致
     CATEGORY_GROUPS = [
         ("18+精选", [("mrds", "每日大赛"), ("hjsq", "海角社区"), ("aidj", "AI短剧"),
                      ("crfys", "午夜剧场"), ("dmhv", "动漫天堂"), ("sgpjs", "水果派解说")]),
@@ -241,7 +186,6 @@ class Spider(BaseSpider):
                      ("slec", "影视床戏"), ("kpzj", "看片专辑")]),
     ]
 
-    # 多线路域名池（含 CloudFront 亚马逊全球 CDN 与高速镜像）
     DOMAIN_POOL = [
         "https://d10cq29fdobmmg.cloudfront.net",
         "https://catch.belwfufv.cc",
@@ -275,6 +219,9 @@ class Spider(BaseSpider):
         self._img_lock = threading.Lock()
         self._group_subs = {gname: subs for gname, subs in self.CATEGORY_GROUPS}
         self.categories = self._build_categories()
+        self.page_cache = {}
+        self.page_index = {}
+        self.page_keys = []
 
     def _build_categories(self):
         cats = [{"type_id": "category/jrgb", "type_name": "今日大瓜"}]
@@ -286,8 +233,6 @@ class Spider(BaseSpider):
         return "911爆料网"
 
     def _select_fastest_host(self):
-        """并发探测各域名分类页,选出能解析出内容且延迟最低的主机,并缓存 15 分钟。
-        仅靠 HEAD 延迟会选中返回验证页/跳转页的坏域名,这里直接验证内容有效性。"""
         cache_key = "fastest_911_host"
         cached = get_cache(cache_key)
         if cached:
@@ -384,8 +329,6 @@ class Spider(BaseSpider):
         return getattr(self, "t4_api", "")
 
     def _wrap_media_proxy(self, url):
-        """TVBox 有 localProxy 代理时,把直连 m3u8/mp4 改为经代理地址,规避设备侧
-        DNS 污染与防盗链;本地/无代理环境保持直链。"""
         try:
             if not url:
                 return url
@@ -414,7 +357,6 @@ class Spider(BaseSpider):
 
     @staticmethod
     def _looks_like_content(html_text):
-        """粗略判断响应是否为真实内容页,用于跳过 JS 验证页/跳转页等无效响应。"""
         if not html_text or len(html_text) < 500:
             return False
         return bool(re.search(r"/(?:archives|article|post|detail)/\d+", html_text, re.I))
@@ -442,7 +384,6 @@ class Spider(BaseSpider):
                 if parsed.netloc and parsed.netloc != urlparse(b_host).netloc:
                     candidates.append(url.replace(f"{parsed.scheme}://{parsed.netloc}", b_host))
 
-        # 双级超时优化：连接超时 2.5s，传输超时 5s；JS 验证页/跳转页会被判定为无效并继续尝试下一候选
         for target_url in candidates:
             try:
                 r = self.session.get(target_url, headers=self.headers, timeout=(2.5, 5), verify=False)
@@ -501,12 +442,10 @@ class Spider(BaseSpider):
         if not raw_str and node is not None:
             raw_str = str(node)
 
-        # 1. 匹配 loadBannerDirect
         script_match = re.search(r"loadBannerDirect\(['\"]([^'\"]+)['\"]", raw_str)
         if script_match:
             return script_match.group(1).strip()
 
-        # 2. 匹配 meta 标签
         if hasattr(node, "xpath") and etree:
             meta_imgs = node.xpath('.//meta[@itemprop="image" or @itemprop="thumbnailUrl"]/@content')
             if meta_imgs and meta_imgs[0].strip():
@@ -516,7 +455,6 @@ class Spider(BaseSpider):
             if meta_img and meta_img.get("content"):
                 return meta_img.get("content").strip()
 
-        # 3. 匹配混淆与懒加载属性
         if hasattr(node, "xpath") and etree:
             for attr in self._IMG_ATTRS:
                 vals = node.xpath(f'.//img/@{attr}')
@@ -530,7 +468,6 @@ class Spider(BaseSpider):
                     if self._good_pic_val(val):
                         return val
 
-        # 4. 匹配 CSS background-image
         bg_match = re.search(r'background-image\s*:\s*url\([\'"]?([^\'")]+)[\'"]?\)', raw_str, re.I)
         if bg_match and self._good_pic_val(bg_match.group(1)):
             return bg_match.group(1).strip()
@@ -566,7 +503,6 @@ class Spider(BaseSpider):
         if not html_text:
             return videos
 
-        # 优先采用 C 语言级加速的 lxml.etree 极速解析
         if etree:
             try:
                 parser = etree.HTMLParser(recover=True, encoding="utf-8")
@@ -593,7 +529,6 @@ class Spider(BaseSpider):
             except Exception:
                 pass
 
-        # 备选 BeautifulSoup 降级
         if not videos and BeautifulSoup:
             doc = BeautifulSoup(html_text, "html.parser")
             containers = doc.select("div#index article, div#archive article, ul.row li, div.article-item, article, .post-item, .video-item, div[class*='item']")
@@ -616,6 +551,124 @@ class Spider(BaseSpider):
 
         return videos
 
+    def _t(self, s):
+        return str(s or "").replace("$", " ").replace("#", " ").strip()
+
+    def _list_filt(self, extend):
+        if isinstance(extend, dict):
+            return json.dumps(extend, sort_keys=True, ensure_ascii=False)
+        return str(extend or "")
+
+    def _cache_page(self, key, items):
+        videos = [it for it in (items or []) if isinstance(it, dict) and it.get("vod_id")]
+        if not videos:
+            return
+        self.page_cache[key] = videos
+        if key in self.page_keys:
+            self.page_keys.remove(key)
+        self.page_keys.append(key)
+        while len(self.page_keys) > 30:
+            old = self.page_keys.pop(0)
+            for it in self.page_cache.pop(old, []):
+                vid = str(it.get("vod_id") or "")
+                if self.page_index.get(vid) == old:
+                    self.page_index.pop(vid, None)
+        for it in videos:
+            self.page_index[str(it["vod_id"])] = key
+
+    def _split_eps(self, raw):
+        eps = []
+        for p in str(raw or "").split("#"):
+            if not p:
+                continue
+            n, u = p.split("$", 1) if "$" in p else ("", p)
+            eps.append((self._t(n), u))
+        return eps
+
+    def _playlist_items(self, vid, limit=20):
+        vid = str(vid)
+        key = self.page_index.get(vid)
+        items = list(self.page_cache.get(key, [])) if key else []
+        idx = next((i for i, it in enumerate(items) if str(it.get("vod_id")) == vid), -1)
+        if idx < 0:
+            return []
+        out, seen = [], set()
+
+        def _take(rows):
+            for it in rows:
+                oid = str(it.get("vod_id") or "")
+                if not oid or oid in seen:
+                    continue
+                seen.add(oid)
+                out.append(it)
+                if len(out) >= limit:
+                    return True
+            return False
+
+        if _take(items[idx:]) or not isinstance(key, tuple) or len(key) < 4:
+            return out
+        kind, tid, filt, pg = key[0], key[1], key[2], key[3]
+        try:
+            n = int(str(pg) or "1")
+        except Exception:
+            return out
+        for _ in range(4):
+            n += 1
+            before = len(out)
+            try:
+                if kind == "search":
+                    r = self.searchContent(tid, False, str(n))
+                else:
+                    extend = json.loads(filt) if filt and str(filt).startswith("{") else None
+                    r = self.categoryContent(tid, str(n), False, extend)
+                nxt = (r or {}).get("list") or []
+            except Exception:
+                nxt = []
+            if not nxt or _take(nxt) or len(out) == before:
+                break
+        return out
+
+    def _build_page_play(self, vid, film, play_from, play_url):
+        vid = str(vid)
+        film = self._t(film) or vid
+        froms = [x for x in str(play_from or "").split("$$$") if x]
+        items = self._playlist_items(vid)
+        if not froms or not items:
+            return play_from, play_url
+        groups = str(play_url or "").split("$$$")
+        outs = []
+        for i, _n in enumerate(froms):
+            raw = groups[i] if i < len(groups) else (groups[0] if groups else "")
+            eps = self._split_eps(raw)
+            parts = []
+            for it in items:
+                oid = str(it.get("vod_id") or "")
+                if not oid:
+                    continue
+                name = film if oid == vid else (self._t(it.get("vod_name")) or oid)
+                if oid == vid and len(eps) > 1:
+                    for j, (_en, u) in enumerate(eps):
+                        parts.append("%s$%s" % (self._t("%s %02d" % (name, j + 1)), u or ("nid:%s" % quote(oid, safe=""))))
+                elif oid == vid and eps and eps[0][1]:
+                    parts.append("%s$%s" % (name, eps[0][1]))
+                else:
+                    parts.append("%s$nid:%s" % (name, quote(oid, safe="")))
+            if parts:
+                outs.append("#".join(parts))
+        if not outs:
+            return play_from, play_url
+        return "$$$".join(froms[:len(outs)]), "$$$".join(outs)
+
+    def _load_src(self, vid):
+        vod = self._load_detail_vod(vid) or {}
+        froms = [x for x in str(vod.get("vod_play_from") or "").split("$$$") if x]
+        groups = str(vod.get("vod_play_url") or "").split("$$$")
+        src = []
+        for i, name in enumerate(froms):
+            raw = groups[i] if i < len(groups) else (groups[0] if groups else "")
+            src.append((name, self._split_eps(raw)))
+        return src
+
     def homeContent(self, filter=False):
         filters = {}
         for gname, subs in self.CATEGORY_GROUPS:
@@ -630,15 +683,14 @@ class Spider(BaseSpider):
         }
 
     def homeVideoContent(self):
-        # 直接复用 categoryContent 推荐第一页，利用内存缓存
         return self.categoryContent("category/jrgb", "1")
 
     def categoryContent(self, tid, pg, filter=False, extend=None):
         page = _page(pg)
         raw = str(tid or "category/jrgb").strip("/")
         group_name, sub_id = self._split_tid(raw)
+        page_key = ("cate", str(tid or ""), self._list_filt(extend), str(page))
 
-        # 主分类页: 用户选择子分类筛选后切换到对应子分类, 默认聚合该组
         if group_name:
             sel = (extend or {}).get("sub") or ""
             if sel in dict(self._group_subs.get(group_name, [])):
@@ -647,17 +699,20 @@ class Spider(BaseSpider):
                 cache_key = f"cate_group_{group_name}"
                 cached = get_cache(cache_key)
                 if cached:
+                    self._cache_page(page_key, (cached or {}).get("list"))
                     return cached
                 videos = self._fetch_group(group_name)
                 res = {"list": videos, "page": page, "pagecount": page,
                        "limit": len(videos) if videos else 20, "total": len(videos)}
                 if videos:
                     set_cache(cache_key, res, ttl=180)
+                self._cache_page(page_key, res.get("list"))
                 return res
 
         cache_key = f"cate_{sub_id}_{page}"
         cached = get_cache(cache_key)
         if cached:
+            self._cache_page(page_key, (cached or {}).get("list"))
             return cached
 
         url = f"{self.host}/category/{sub_id}/{page}/" if page > 1 else f"{self.host}/category/{sub_id}/"
@@ -673,11 +728,10 @@ class Spider(BaseSpider):
         }
         if videos:
             set_cache(cache_key, res, ttl=180)
+        self._cache_page(page_key, res.get("list"))
         return res
 
     def _split_tid(self, raw):
-        """把 type_id 拆成 (主分类名, 子分类id)。
-        "18+精选" 为主分类聚合; "18+精选/aidj" / "category/jrgb" 均按子分类处理。"""
         parts = raw.split("/") if raw else []
         if len(parts) >= 2:
             return None, parts[-1]
@@ -686,7 +740,6 @@ class Spider(BaseSpider):
         return None, raw or "jrgb"
 
     def _fetch_group(self, group_name):
-        """聚合主分类下所有子分类第一页内容并去重。"""
         videos, seen = [], set()
         for sub_id, _ in self._group_subs.get(group_name, []):
             html_text = self._fetch(f"{self.host}/category/{sub_id}/")
@@ -757,23 +810,20 @@ class Spider(BaseSpider):
 
         return play_urls
 
-    def detailContent(self, ids):
-        if not ids:
-            return {"list": []}
-        did = ids[0] if isinstance(ids, list) else ids
+    def _load_detail_vod(self, did):
         url = self._fix_url(did)
-
         cache_key = f"detail_{url}"
         cached = get_cache(cache_key)
         if cached:
-            return cached
+            lst = (cached or {}).get("list") or []
+            vod = dict(lst[0]) if lst and isinstance(lst[0], dict) else {}
+            return vod or None
 
         html_text = self._fetch(url)
         if not html_text:
-            return {"list": []}
+            return None
         self._last_detail_url = url
 
-        # 1. 标题提取
         title = ""
         t_match = re.search(r'<h1[^>]*class=["\'][^"\']*(?:title|headline)[^"\']*["\'][^>]*>(.+?)</h1>', html_text, re.I | re.S)
         if t_match:
@@ -787,7 +837,6 @@ class Spider(BaseSpider):
             if t_match:
                 title = t_match.group(1).split("-")[0].split("_")[0].strip()
 
-        # 2. 封面提取
         pic = ""
         og_match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', html_text, re.I)
         if not og_match:
@@ -799,7 +848,6 @@ class Spider(BaseSpider):
             if p_match:
                 pic = p_match.group(1).strip()
 
-        # 3. 简介提取
         desc = ""
         desc_match = re.search(r'<meta[^>]+(?:name|property)=["\'](?:og:description|description)["\'][^>]+content=["\']([^"\']+)["\']', html_text, re.I)
         if not desc_match:
@@ -807,16 +855,13 @@ class Spider(BaseSpider):
         if desc_match:
             desc = desc_match.group(1).strip()
 
-        # 4. 发布时间
         date_str = ""
         d_match = re.search(r'(?:datePublished|pubdate|time)[^>]*>([0-9\-\s:]+)<', html_text, re.I)
         if d_match:
             date_str = d_match.group(1).strip()
 
-        # 5. 精确提取视频流列表
         play_urls = self._extract_video_urls(html_text)
 
-        # 6. 选集与线路组装
         episodes = []
         for idx, p_url in enumerate(play_urls, 1):
             ep_title = f"视频{idx}" if len(play_urls) > 1 else "在线播放"
@@ -833,9 +878,21 @@ class Spider(BaseSpider):
             "vod_play_from": "$$$".join(["911爆料", "备用解析"]),
             "vod_play_url": "$$$".join([play_url_str, play_url_str])
         }
-        res = {"list": [vod]}
-        set_cache(cache_key, res, ttl=300)
-        return res
+        set_cache(cache_key, {"list": [dict(vod)]}, ttl=300)
+        return vod
+
+    def detailContent(self, ids):
+        if not ids:
+            return {"list": []}
+        did = ids[0] if isinstance(ids, list) else ids
+        vod = self._load_detail_vod(did)
+        if not vod:
+            return {"list": []}
+        vod = dict(vod)
+        vod["vod_play_from"], vod["vod_play_url"] = self._build_page_play(
+            vod.get("vod_id") or did, vod.get("vod_name") or "",
+            vod.get("vod_play_from"), vod.get("vod_play_url"))
+        return {"list": [vod]}
 
     def searchContent(self, key, quick=False, pg="1"):
         page = _page(pg)
@@ -843,24 +900,40 @@ class Spider(BaseSpider):
         url = f"{self.host}/search/{encoded_key}/{page}/" if page > 1 else f"{self.host}/search/{encoded_key}/"
         html_text = self._fetch(url)
         videos = self._extract_cards(html_text)
-        return {
+        res = {
             "list": videos,
             "page": page,
             "pagecount": page + 1 if len(videos) >= 10 else page,
             "limit": len(videos) if videos else 20,
             "total": 9999
         }
+        self._cache_page(("search", str(key or ""), "", str(page)), res.get("list"))
+        return res
 
     def playerContent(self, flag, id, vipFlags=None):
         play_id = str(id or "").strip()
-        if "$" in play_id:
+        if play_id.startswith("nid:"):
+            vid = unquote(play_id[4:])
+            src = self._load_src(vid)
+            picked = next((eps for name, eps in src if str(name) == str(flag) and eps), None)
+            if not picked and src:
+                picked = src[0][1]
+            real = picked[0][1] if picked else ""
+            play_id = real if real and not str(real).startswith("nid:") else ""
+        if "$" in play_id and not play_id.startswith("http"):
             play_id = play_id.split("$")[-1].strip()
-        play_id = self._clean_url(unquote(play_id))
-
-        # 本地代理地址(/proxy? /local/)或直连视频格式直接透传,其余走解析
-        passthrough = self.isVideoFormat(play_id) or (
-            play_id.startswith("http") and ("/proxy?" in play_id or "/local/" in play_id)
+        play_id = self._clean_url(play_id)
+        proxy = play_id.startswith("http") and (
+            "/proxy?" in play_id or "/local/" in play_id
+            or "type=m3u8" in play_id or "type=ts" in play_id
         )
+        if play_id and not proxy:
+            play_id = self._clean_url(unquote(play_id))
+            proxy = play_id.startswith("http") and (
+                "/proxy?" in play_id or "/local/" in play_id
+                or "type=m3u8" in play_id or "type=ts" in play_id
+            )
+        passthrough = bool(play_id) and (proxy or self.isVideoFormat(play_id))
         return {
             "parse": 0 if passthrough else 1,
             "playUrl": "",
@@ -872,7 +945,6 @@ class Spider(BaseSpider):
         }
 
     def _refresh_auth_url(self, old_url):
-        """播放失败时重抓最近详情页,尝试拿到新 auth_key 的 m3u8(CDN 缓存刷新后生效)。"""
         try:
             if not self._last_detail_url:
                 return ""
@@ -891,8 +963,6 @@ class Spider(BaseSpider):
         return ""
 
     def _media_proxy(self, pt, url):
-        """m3u8/ts/key 播放代理:拉取远端 m3u8 并把分片/密钥改写为代理地址,
-        规避设备侧 DNS 污染与防盗链。"""
         try:
             _pin_url_host(url)
             host = urlparse(url).hostname
@@ -903,7 +973,6 @@ class Spider(BaseSpider):
                     if _try == 0:
                         r = self.session.get(url, headers=req_headers, timeout=(2.5, 8), verify=False, allow_redirects=True)
                     else:
-                        # 失败重试:轮换钉扎 IP 顺序,避开返回 404/400 的坏节点
                         if host and _PIN_MAP.get(host) and len(_PIN_MAP[host]) > 1:
                             _PIN_MAP[host].append(_PIN_MAP[host].pop(0))
                         r = requests.get(url, headers=req_headers, timeout=(2.5, 8), verify=False, allow_redirects=True)
@@ -963,7 +1032,6 @@ class Spider(BaseSpider):
             if m:
                 url = m.group(1).strip()
 
-        # 图片二进制内存缓存（快速滑动防抖，防止重复请求和重复 AES 解密）
         with self._img_lock:
             if url in self._img_cache:
                 mime, c_data = self._img_cache[url]
@@ -995,348 +1063,3 @@ class Spider(BaseSpider):
             return [200, "image/" + mime, content]
         except Exception as e:
             return [500, "text/plain", str(e).encode("utf-8")]
-
-# ===== PAGE_PLAYLIST_START =====
-def _pl_install(_C):
-    if getattr(_C, "_pl_patched", False):
-        return _C
-    _C._pl_patched = True
-    _orig_init = getattr(_C, "init", None)
-    _orig_home = getattr(_C, "homeContent", None)
-    _orig_homev = getattr(_C, "homeVideoContent", None)
-    _orig_cate = getattr(_C, "categoryContent", None)
-    _orig_detail = getattr(_C, "detailContent", None)
-    _orig_search = getattr(_C, "searchContent", None)
-    _orig_searchp = getattr(_C, "searchContentPage", None)
-    _orig_player = getattr(_C, "playerContent", None)
-
-    def _ensure(self):
-        if not hasattr(self, "page_cache"):
-            self.page_cache = {}
-            self.page_index = {}
-            self.page_keys = []
-            self._src_cache = {}
-
-    def _clean(s):
-        return str(s or "").replace("$", " ").replace("#", " ").strip()
-
-    def _enc(s):
-        try:
-            from urllib.parse import quote
-            return quote(str(s or ""), safe="")
-        except Exception:
-            return str(s or "")
-
-    def _dec(s):
-        try:
-            from urllib.parse import unquote
-            return unquote(str(s or ""))
-        except Exception:
-            return str(s or "")
-
-    def _cache_page(self, key, items):
-        _ensure(self)
-        out = []
-        for x in items or []:
-            if isinstance(x, dict) and x.get("vod_id"):
-                out.append(x)
-        if not out:
-            return
-        self.page_cache[key] = out
-        if key in self.page_keys:
-            self.page_keys.remove(key)
-        self.page_keys.append(key)
-        for it in out:
-            self.page_index[str(it["vod_id"])] = key
-        while len(self.page_keys) > 30:
-            old = self.page_keys.pop(0)
-            self.page_cache.pop(old, None)
-
-    def _page_of(self, vid):
-        _ensure(self)
-        key = self.page_index.get(str(vid))
-        if key in self.page_cache:
-            return list(self.page_cache[key])
-        return []
-
-    def _as_result(r):
-        if r is None:
-            return {}
-        if isinstance(r, dict):
-            return r
-        if isinstance(r, (bytes, bytearray)):
-            r = r.decode("utf-8", "ignore")
-        if isinstance(r, str):
-            s = r.strip()
-            if s.startswith("{") or s.startswith("["):
-                try:
-                    import json as _j
-                    return _j.loads(s)
-                except Exception:
-                    return {}
-        return {}
-
-    def _split_sources(vod):
-        fr = str((vod or {}).get("vod_play_from") or "").split("$$$")
-        ur = str((vod or {}).get("vod_play_url") or "").split("$$$")
-        while len(ur) < len(fr):
-            ur.append("")
-        sources = []
-        for i, name in enumerate(fr):
-            parts = []
-            for p in (ur[i] or "").split("#"):
-                if not p:
-                    continue
-                if "$" in p:
-                    n, u = p.split("$", 1)
-                else:
-                    n, u = str(i + 1), p
-                parts.append((_clean(n), u))
-            sources.append((_clean(name) or ("线路%d" % (i + 1)), parts))
-        return [x for x in sources if x[1]]
-
-    def _call_detail(self, vid):
-        if not _orig_detail:
-            return {}
-        try:
-            return _as_result(_orig_detail(self, [vid]))
-        except TypeError:
-            try:
-                return _as_result(_orig_detail(self, vid))
-            except Exception:
-                return {}
-        except Exception:
-            return {}
-
-    def _load_src(self, vid):
-        _ensure(self)
-        vid = str(vid)
-        if vid in self._src_cache:
-            return self._src_cache[vid]
-        r = self._pl_call_detail(vid)
-        vod = ((r.get("list") or [None])[0]) or {}
-        sources = _split_sources(vod)
-        self._src_cache[vid] = sources
-        return sources
-
-    def _item_parts(self, it, src_idx, current_sources, current_vid):
-        iid = str(it.get("vod_id") or "")
-        if not iid:
-            return []
-        name = _clean(it.get("vod_name") or iid) or iid
-        if iid == str(current_vid):
-            eps = []
-            if current_sources:
-                if src_idx < len(current_sources) and current_sources[src_idx][1]:
-                    eps = current_sources[src_idx][1]
-                else:
-                    eps = current_sources[0][1]
-            if len(eps) > 1:
-                out = []
-                for i, (en, u) in enumerate(eps):
-                    label = _clean("%s %s" % (name, en or ("%02d" % (i + 1))))
-                    out.append("%s$%s" % (label, u))
-                return out
-            if eps:
-                return ["%s$%s" % (name, eps[0][1])]
-            return ["%s$nid:%s" % (name, _enc(iid))]
-        return ["%s$nid:%s" % (name, _enc(iid))]
-
-    def _apply_playlist(self, vid, vod, items):
-        sources = _split_sources(vod)
-        _ensure(self)
-        self._src_cache[str(vid)] = sources
-        if not items:
-            return vod
-        ordered = [x for x in items if str(x.get("vod_id")) == str(vid)]
-        ordered += [x for x in items if str(x.get("vod_id")) != str(vid)]
-        plist, seen = [], set()
-        for it in ordered:
-            iid = str(it.get("vod_id") or "")
-            if not iid or iid in seen:
-                continue
-            seen.add(iid)
-            plist.append(it)
-        if not plist:
-            return vod
-        if not sources:
-            sources = [("线路1", [("播放", "nid:%s" % _enc(vid))])]
-        play_from, play_urls = [], []
-        for i, (sname, _eps) in enumerate(sources):
-            parts = []
-            for it in plist:
-                parts.extend(self._pl_item_parts(it, i, sources, vid))
-            if not parts:
-                continue
-            play_from.append(sname or ("线路%d" % (i + 1)))
-            play_urls.append("#".join(parts))
-        if not play_from:
-            return vod
-        vod = dict(vod)
-        vod["vod_play_from"] = "$$$".join(play_from)
-        vod["vod_play_url"] = "$$$".join(play_urls)
-        return vod
-
-    def init(self, *args, **kwargs):
-        _ensure(self)
-        if _orig_init:
-            return _orig_init(self, *args, **kwargs)
-
-    def homeContent(self, *args, **kwargs):
-        _ensure(self)
-        r = _orig_home(self, *args, **kwargs) if _orig_home else {}
-        try:
-            _cache_page(self, ("home",), _as_result(r).get("list"))
-        except Exception:
-            pass
-        return r
-
-    def homeVideoContent(self, *args, **kwargs):
-        _ensure(self)
-        r = _orig_homev(self, *args, **kwargs) if _orig_homev else {"list": []}
-        try:
-            _cache_page(self, ("homev",), _as_result(r).get("list"))
-        except Exception:
-            pass
-        return r
-
-    def categoryContent(self, *args, **kwargs):
-        _ensure(self)
-        r = _orig_cate(self, *args, **kwargs) if _orig_cate else {"list": []}
-        try:
-            tid = args[0] if args else kwargs.get("tid", "")
-            pg = args[1] if len(args) > 1 else kwargs.get("pg", "1")
-            ext = args[3] if len(args) > 3 else kwargs.get("extend", "")
-            _cache_page(self, ("cate", str(tid), str(pg), str(ext)), _as_result(r).get("list"))
-        except Exception:
-            pass
-        return r
-
-    def searchContent(self, *args, **kwargs):
-        _ensure(self)
-        if not _orig_search:
-            return {"list": []}
-        r = _orig_search(self, *args, **kwargs)
-        try:
-            key = args[0] if args else kwargs.get("key", "")
-            pg = args[2] if len(args) > 2 else kwargs.get("pg", "1")
-            _cache_page(self, ("search", str(key), str(pg)), _as_result(r).get("list"))
-        except Exception:
-            pass
-        return r
-
-    def searchContentPage(self, *args, **kwargs):
-        _ensure(self)
-        if not _orig_searchp:
-            return {"list": []}
-        r = _orig_searchp(self, *args, **kwargs)
-        try:
-            key = args[0] if args else kwargs.get("key", "")
-            pg = args[2] if len(args) > 2 else kwargs.get("page", kwargs.get("pg", "1"))
-            _cache_page(self, ("searchp", str(key), str(pg)), _as_result(r).get("list"))
-        except Exception:
-            pass
-        return r
-
-    def detailContent(self, ids, *args, **kwargs):
-        _ensure(self)
-        if isinstance(ids, (list, tuple)):
-            vid = str(ids[0]) if ids else ""
-            call_ids = list(ids)
-        else:
-            vid = str(ids)
-            call_ids = [vid]
-        if vid.startswith("nid:"):
-            vid = _dec(vid[4:])
-            call_ids[0] = vid
-        cached = _page_of(self, vid)
-        if _orig_detail:
-            try:
-                r = _orig_detail(self, call_ids, *args, **kwargs)
-            except TypeError:
-                r = _orig_detail(self, call_ids)
-        else:
-            r = {"list": []}
-        try:
-            rr = _as_result(r)
-            lst = rr.get("list") or []
-            if not lst or not isinstance(lst[0], dict):
-                return r
-            vod = dict(lst[0])
-            vod["vod_id"] = str(vod.get("vod_id") or vid)
-            if not vod.get("vod_name"):
-                hit = next((x for x in cached if str(x.get("vod_id")) == vid), None)
-                if hit:
-                    vod["vod_name"] = hit.get("vod_name") or vid
-            if cached:
-                vod = self._pl_apply_playlist(vid, vod, cached)
-            rr = dict(rr)
-            rr["list"] = [vod]
-            if isinstance(r, dict) or r is None:
-                return rr
-            try:
-                import json as _j
-                return _j.dumps(rr, ensure_ascii=False)
-            except Exception:
-                return rr
-        except Exception:
-            return r
-
-    def playerContent(self, flag, id, vipFlags=None, *args, **kwargs):
-        _ensure(self)
-        s = str(id)
-        if s.startswith("nid:"):
-            vid = _dec(s[4:])
-            sources = self._pl_load_src(vid)
-            real = ""
-            if sources:
-                picked = None
-                for name, eps in sources:
-                    if str(name) == str(flag) and eps:
-                        picked = eps
-                        break
-                if not picked:
-                    picked = sources[0][1]
-                if picked:
-                    real = picked[0][1]
-            if real and not str(real).startswith("nid:"):
-                id = real
-            else:
-                id = vid
-        if not _orig_player:
-            return {"parse": 0, "url": id}
-        try:
-            return _orig_player(self, flag, id, vipFlags, *args, **kwargs)
-        except TypeError:
-            try:
-                return _orig_player(self, flag, id, vipFlags)
-            except TypeError:
-                return _orig_player(self, flag, id)
-
-    _C._pl_call_detail = _call_detail
-    _C._pl_load_src = _load_src
-    _C._pl_item_parts = _item_parts
-    _C._pl_apply_playlist = _apply_playlist
-    if _orig_init:
-        _C.init = init
-    if _orig_home:
-        _C.homeContent = homeContent
-    if _orig_homev:
-        _C.homeVideoContent = homeVideoContent
-    if _orig_cate:
-        _C.categoryContent = categoryContent
-    if _orig_search:
-        _C.searchContent = searchContent
-    if _orig_searchp:
-        _C.searchContentPage = searchContentPage
-    if _orig_detail:
-        _C.detailContent = detailContent
-    if _orig_player:
-        _C.playerContent = playerContent
-    return _C
-
-try:
-    _pl_install(Spider)
-except Exception:
-    pass
-# ===== PAGE_PLAYLIST_END =====

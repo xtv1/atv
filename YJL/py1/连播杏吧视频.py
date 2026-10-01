@@ -162,10 +162,11 @@ class Spider(Spider):
         videos = []
         for name in chunk:
             videos.append({
-                "vod_id": f"keyword:{name}",
+                "vod_id": "%s%s" % (self.FOLDER_PREFIX, name),
                 "vod_name": name,
                 "vod_pic": "",
-                "vod_remarks": "关键词"
+                "vod_remarks": "关键词",
+                "vod_tag": "folder"
             })
         total = len(names)
         pagecount = (total + limit - 1) // limit if total else 1
@@ -250,6 +251,8 @@ class Spider(Spider):
         tag = str(extend.get("videoTag") or "").strip()
         if tag:
             return self._search_videos(tag, pg)
+        if tid.startswith(self.FOLDER_PREFIX) or tid.startswith("keyword:"):
+            return self._search_videos(tid.split(":", 1)[-1], pg)
         if tid == self.KEYWORDS_TID:
             return self._keyword_video_list(pg)
         videos = []

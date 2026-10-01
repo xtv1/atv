@@ -50,7 +50,7 @@ class Spider(BaseSpider):
     def get_working_host(self):
         publish_urls = ['https://818hl30.com/']
         words = ['able', 'action', 'album', 'award', 'ahead', 'agent', 'afraid', 'across', 'among', 'aside']
-        suffixes = ['.gqtztawx.cc', '.vdsrmzfge.cc']
+        suffixes = ['.fxbqqgya.cc', '.gdqqvvybo.cc']
 
         for url in publish_urls:
             try:
@@ -60,29 +60,26 @@ class Spider(BaseSpider):
                 m = re.search(r"words = '([^']+)'\.split", text)
                 if m and len(m.group(1).split(',')) > 10:
                     words = m.group(1).split(',')
-                sfx = re.findall(r"words\.random\(\) \+ '([^']+)'", text)
+                sfx = re.findall(r"words\.random\(\)\s*\+\s*'([^']+)'", text)
                 if sfx:
-                    suffixes = list(dict.fromkeys(suffixes + sfx))
+                    suffixes = list(dict.fromkeys(sfx))
             except Exception:
                 continue
 
-        random.shuffle(words)
-        candidates = ['https://cell.lacdfsq.cc/']
-        for w in words[:8]:
-            for s in suffixes:
-                candidates.append(f"https://{w}{s}/")
-
-        seen = set()
-        for url in candidates:
-            if url in seen: continue
-            seen.add(url)
-            try:
-                response = requests.get(url, headers=self.headers, proxies=self.proxies, timeout=5)
-                if response.status_code == 200:
-                    return url
-            except Exception:
-                continue
-        return candidates[0]
+        pool = words[:]
+        random.shuffle(pool)
+        for s in suffixes:
+            for w in pool[:8]:
+                host = f"https://{w}{s}/"
+                try:
+                    ping = requests.get(host + "upload/ping.gif", headers=self.headers, proxies=self.proxies, timeout=5)
+                    if ping.status_code != 200: continue
+                    response = requests.get(host, headers=self.headers, proxies=self.proxies, timeout=5)
+                    if response.status_code == 200:
+                        return host
+                except Exception:
+                    continue
+        return f"https://{pool[0]}{suffixes[0]}/" if pool and suffixes else publish_urls[0]
 
     def homeContent(self, filter):
         try:
@@ -97,7 +94,7 @@ class Spider(BaseSpider):
                     link = k('a')
                     href = (link.attr('href') or '').strip()
                     name = (link.text() or '').strip()
-                    if not href or href == '#' or not name: continue
+                    if not href or href == '#' or not name or '/category/' not in href: continue
                     classes.append({'type_name': name, 'type_id': href})
                 if classes: break
             
@@ -379,6 +376,9 @@ class Spider(BaseSpider):
         if not html_content: return ''
 
         html_content = html_content.replace('&quot;', '"').replace('&apos;', "'").replace('&amp;', '&')
+
+        if m := re.search(r'z-image-loader-url=["\']([^"\']+)', html_content):
+            return self._proc_url(m.group(1))
 
         if 'data:image' in html_content:
             m = re.search(r'(data:image/[a-zA-Z0-9+/=;,]+)', html_content)

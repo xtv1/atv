@@ -473,28 +473,63 @@ def _pl_install(_C):
         self._src_cache[vid] = sources
         return sources
 
+    def _prefetch_src(self, items, keep_vid, limit=10):
+        _ensure(self)
+        unknown = []
+        for it in items or []:
+            iid = str(it.get("vod_id") or "")
+            if not iid or iid == str(keep_vid) or iid in self._src_cache:
+                continue
+            unknown.append(iid)
+            if len(unknown) >= limit:
+                break
+        if not unknown:
+            return
+        ex = None
+        try:
+            from concurrent.futures import ThreadPoolExecutor, wait
+            ex = ThreadPoolExecutor(max_workers=min(4, len(unknown)))
+            futs = [ex.submit(_load_src, self, iid) for iid in unknown]
+            wait(futs, timeout=8)
+        except Exception:
+            for iid in unknown[:4]:
+                try:
+                    _load_src(self, iid)
+                except Exception:
+                    pass
+        finally:
+            if ex:
+                try:
+                    ex.shutdown(wait=False)
+                except Exception:
+                    pass
+
     def _item_parts(self, it, src_idx, current_sources, current_vid):
         iid = str(it.get("vod_id") or "")
         if not iid:
             return []
         name = _clean(it.get("vod_name") or iid) or iid
         if iid == str(current_vid):
-            eps = []
-            if current_sources:
-                if src_idx < len(current_sources) and current_sources[src_idx][1]:
-                    eps = current_sources[src_idx][1]
-                else:
-                    eps = current_sources[0][1]
-            if len(eps) > 1:
-                out = []
-                for i, (en, u) in enumerate(eps):
-                    label = _clean("%s %s" % (name, en or ("%02d" % (i + 1))))
-                    out.append("%s$%s" % (label, u))
-                return out
-            if eps:
-                return ["%s$%s" % (name, eps[0][1])]
+            sources = current_sources
+        else:
+            sources = self._src_cache.get(iid) or []
+        eps = []
+        if sources:
+            if src_idx < len(sources) and sources[src_idx][1]:
+                eps = sources[src_idx][1]
+            else:
+                eps = sources[0][1]
+        if len(eps) > 1:
+            out = []
+            for i, (en, u) in enumerate(eps):
+                label = _clean("%s %s" % (name, en or ("%02d" % (i + 1))))
+                out.append("%s$%s" % (label, u))
+            return out
+        if eps and (iid == str(current_vid) or (eps[0][1] and not str(eps[0][1]).startswith("nid:"))):
+            return ["%s$%s" % (name, eps[0][1])]
+        if iid == str(current_vid):
             return ["%s$nid:%s" % (name, _enc(iid))]
-        return ["%s$nid:%s" % (name, _enc(iid))]
+        return []
 
     def _apply_playlist(self, vid, vod, items):
         sources = _split_sources(vod)
@@ -513,6 +548,7 @@ def _pl_install(_C):
             plist.append(it)
         if not plist:
             return vod
+        _prefetch_src(self, plist, vid)
         if not sources:
             sources = [("线路1", [("播放", "nid:%s" % _enc(vid))])]
         play_from, play_urls = [], []
@@ -669,6 +705,7 @@ def _pl_install(_C):
 
     _C._pl_call_detail = _call_detail
     _C._pl_load_src = _load_src
+    _C._pl_prefetch_src = _prefetch_src
     _C._pl_item_parts = _item_parts
     _C._pl_apply_playlist = _apply_playlist
     if _orig_init:

@@ -3,7 +3,7 @@
 #huangguoaiai@gmail.com
 #永久中转页huangguoai.ai
 import re, json, requests, base64, socket, time
-from urllib.parse import quote, unquote, urlencode
+from urllib.parse import quote, unquote
 from base.spider import Spider
 try:
     from Crypto.Cipher import AES
@@ -71,41 +71,15 @@ class Spider(Spider):
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "zh-CN,zh;q=0.9"
         }
-        self.cat_map = [
-            {"type_id": "ai-duanju", "type_name": "AI成人短剧", "path": "/ai-duanju/", "api": "ai-duanju",
-             "tabs": [{"v": "latest", "n": "最新更新", "q": "sort=latest"},
-                      {"v": "hot", "n": "当前热播", "q": ""},
-                      {"v": "original", "n": "独家原创", "q": "is_original=1"},
-                      {"v": "random", "n": "随机推荐", "q": "sort=random&size=20"}]},
-            {"type_id": "ai-manju", "type_name": "AI成人漫剧", "path": "/ai-manju/", "api": "ai-manju",
-             "tabs": [{"v": "latest", "n": "最新更新", "q": "sort=latest"},
-                      {"v": "hot", "n": "当前热播", "q": ""},
-                      {"v": "original", "n": "独家原创", "q": "is_original=1"},
-                      {"v": "random", "n": "随机推荐", "q": "sort=random&size=20"}]},
-            {"type_id": "ai-huanlian", "type_name": "AI换脸", "path": "/ai-huanlian/", "api": "ai-huanlian",
-             "tabs": [{"v": "latest", "n": "最新更新", "q": "sort=latest"},
-                      {"v": "hot", "n": "当前热播", "q": ""},
-                      {"v": "original", "n": "独家原创", "q": "is_original=1"},
-                      {"v": "random", "n": "随机推荐", "q": "sort=random&size=20"}]},
-            {"type_id": "ai-mogai", "type_name": "AI魔改", "path": "/ai-mogai/", "api": "ai-mogai",
-             "tabs": [{"v": "latest", "n": "最新更新", "q": "sort=latest"},
-                      {"v": "hot", "n": "当前热播", "q": ""},
-                      {"v": "original", "n": "独家原创", "q": "is_original=1"},
-                      {"v": "random", "n": "随机推荐", "q": "sort=random&size=20"}]},
-            {"type_id": "topic", "type_name": "专题", "path": "/topics/", "kind": "topic"},
-            {"type_id": "rank", "type_name": "排行榜", "path": "/ranks/hot/", "kind": "rank",
-             "tabs": [{"v": "hot", "n": "热播榜", "path": "/ranks/hot/"},
-                      {"v": "potential", "n": "潜力榜", "path": "/ranks/potential/"},
-                      {"v": "recommend", "n": "推荐榜", "path": "/ranks/recommend/"}]},
-            {"type_id": "chigua", "type_name": "黄果吃瓜", "path": "/chigua/", "kind": "chigua",
-             "tabs": [{"v": "latest", "n": "最新吃瓜", "path": "/chigua/"},
-                      {"v": "remen", "n": "热门吃瓜", "path": "/chigua/remen/"},
-                      {"v": "yuanchuang", "n": "AI原创", "path": "/chigua/yuanchuang/"}]}
-        ]
+        self._cats = None
+        self._cat_filters = {}
         self.key = bytes(int(c) for c in "102_53_100_57_54_53_100_102_55_53_51_51_54_50_55_48".split("_"))
         self.iv = bytes(int(c) for c in "57_55_98_54_48_51_57_52_97_98_99_50_102_98_101_49".split("_"))
-        self.filter_map = {"": {}}
         self.fallback_ips = {}
+        self.page_cache = {}
+        self.page_index = {}
+        self.page_keys = []
+        self._src_cache = {}
         _fallback_ips.update(self.fallback_ips)
         socket.getaddrinfo = _patched_getaddrinfo
         self._pin_host(self.host)
@@ -114,7 +88,45 @@ class Spider(Spider):
         return self.name
 
     def init(self, extend=""):
-        pass
+        self._ensure_host()
+
+    def _cache_get(self, key):
+        try:
+            v = self.getCache(key)
+            if isinstance(v, bytes):
+                v = v.decode("utf-8", "ignore")
+            if isinstance(v, str) and v:
+                return json.loads(v)
+            if isinstance(v, dict):
+                return v
+        except Exception:
+            pass
+        return None
+
+    def _cache_set(self, key, val):
+        try:
+            self.setCache(key, json.dumps(val, ensure_ascii=False))
+        except Exception:
+            pass
+
+    def _ensure_host(self):
+        if getattr(self, "_host_ready", False):
+            return
+        cached = self._cache_get("hg_host") or {}
+        host = str(cached.get("host") or "").rstrip("/")
+        if host.startswith("http"):
+            self.host = host
+            self.header["Referer"] = self.host
+            self._pin_host(self.host)
+        html = self.getHtml("https://huangguoai.ai/")
+        if html:
+            m = re.search(r'data-url="(https://[^"]+)"', html)
+            if m:
+                self.host = m.group(1).rstrip("/")
+                self.header["Referer"] = self.host
+                self._pin_host(self.host)
+                self._cache_set("hg_host", {"host": self.host})
+        self._host_ready = True
 
     def getHtml(self, url):
         for attempt in range(3):
@@ -128,6 +140,106 @@ class Spider(Spider):
                 except Exception:
                     pass
         return ""
+
+    def getJson(self, path):
+        self._ensure_host()
+        url = path if str(path).startswith("http") else self.host + path
+        headers = dict(self.header)
+        headers["Accept"] = "application/json, */*"
+        for attempt in range(3):
+            try:
+                r = requests.get(url, headers=headers, timeout=15, verify=False)
+                if r.status_code == 200:
+                    return r.json()
+            except Exception:
+                pass
+        return None
+
+    def _api(self, path):
+        data = self.getJson(path)
+        if not isinstance(data, dict):
+            return None
+        return data.get("data")
+
+    def _apply_page(self, result, pgd, page, n=0):
+        if pgd:
+            result["page"] = pgd.get("page") or page
+            result["pagecount"] = pgd.get("pages") or 1
+            result["total"] = pgd.get("total") or 0
+            result["limit"] = pgd.get("size") or (n or 20)
+        else:
+            result["page"] = page
+            result["pagecount"] = 1
+            result["limit"] = n or 20
+            result["total"] = n
+
+    def _parse_menus(self, data):
+        cats, filters = [], {}
+        for it in (data.get("category") or []):
+            code = str(it.get("cat_code") or "").strip()
+            name = str(it.get("name") or "").strip()
+            if not code or not name or code == "long":
+                continue
+            kind = "chigua" if code == "community" else "video"
+            tid = "chigua" if kind == "chigua" else code
+            cats.append({"type_id": tid, "type_name": name, "kind": kind, "api": code})
+            if kind == "chigua":
+                parent = str(it.get("url") or "/chigua/").strip() or "/chigua/"
+                vals = [{"n": "全部", "v": parent}]
+                for c in (it.get("children") or []):
+                    cn = str(c.get("name") or "").strip()
+                    cu = str(c.get("url") or "").strip()
+                    if cn and cu:
+                        vals.append({"n": cn, "v": cu})
+                filters[tid] = [{"key": "sub", "name": "子分类", "value": vals}]
+            else:
+                filters[tid] = [{"key": "sub", "name": "子分类", "value": [
+                    {"n": "最新更新", "v": "latest"},
+                    {"n": "当前热播", "v": "hot"},
+                    {"n": "独家原创", "v": "original"},
+                    {"n": "随机推荐", "v": "random"},
+                ]}]
+        return cats, filters
+
+    def _apply_extras(self, cats, filters):
+        extras = [
+            ("topic", "专题", "topic", None),
+            ("rank", "排行榜", "rank", [
+                {"n": "热播榜", "v": "hot"},
+                {"n": "潜力榜", "v": "potential"},
+                {"n": "推荐榜", "v": "recommend"},
+            ]),
+            ("author", "黄果官方", "author", [
+                {"n": "黄果官方", "v": "156291"},
+                {"n": "黄果AI大师", "v": "156305"},
+            ]),
+        ]
+        have = {c["type_id"] for c in cats} | {c["type_name"] for c in cats}
+        for tid, name, kind, tabs in extras:
+            if tid in have or name in have:
+                continue
+            cats.append({"type_id": tid, "type_name": name, "kind": kind, "api": tid})
+            if tabs:
+                filters[tid] = [{"key": "sub", "name": "子分类", "value": tabs}]
+        return cats, filters
+
+    def _load_cats(self):
+        if self._cats:
+            return self._cats
+        data = self._api("/api/site/menus") or {}
+        cats, filters = self._parse_menus(data)
+        if cats:
+            self._cache_set("hg_cats", {"cats": cats, "filters": filters})
+        else:
+            cached = self._cache_get("hg_cats") or {}
+            cats = list(cached.get("cats") or [])
+            filters = dict(cached.get("filters") or {})
+        ready = bool(cats)
+        cats, filters = self._apply_extras(cats, filters)
+        self._cat_filters = filters
+        if ready:
+            self._cats = cats
+        return cats
 
     def fix_url(self, url):
         if not url:
@@ -209,56 +321,40 @@ class Spider(Spider):
                 continue
         return result
 
-    def extract_rank(self, html):
+    def parse_rank_list(self, items):
         result = []
-        seen = set()
-        for m in re.finditer(r'<div class="hg-rank-item"[^>]*data-track-id="(\d+)"', html):
+        for it in items or []:
             try:
-                start = m.start()
-                vod_id = m.group(1)
-                if vod_id in seen:
+                vid = str(it.get("video_id") or it.get("id") or "")
+                name = (it.get("title") or "").strip()
+                if not vid or not name:
                     continue
-                chunk = html[start:start + 2500]
-                seen.add(vod_id)
-                link = re.search(r'href="(/detail/%s/)"' % re.escape(vod_id), chunk)
-                if not link:
-                    continue
-                title = re.search(r'data-track-title="([^"]*)"', chunk)
-                vod_name = title.group(1) if title else ""
-                pic = re.search(r'data-src="(https?://[^"]*)"', chunk)
-                vod_pic = self.proc_pic(pic.group(1) if pic else "")
-                heat = re.search(r'hg-rank-item__heat-value[^>]*>([^<]*)', chunk)
-                vod_remarks = heat.group(1).strip() if heat else ""
-                if vod_name:
-                    result.append({
-                        "vod_id": vod_id,
-                        "vod_name": vod_name,
-                        "vod_pic": vod_pic,
-                        "vod_remarks": vod_remarks
-                    })
+                remark = str(it.get("metric_value") or it.get("score") or "")
+                result.append({
+                    "vod_id": vid,
+                    "vod_name": name,
+                    "vod_pic": self.proc_pic(it.get("cover") or ""),
+                    "vod_remarks": remark
+                })
             except Exception:
                 continue
         return result
 
-    def extract_topics(self, html):
+    def parse_topic_list(self, items):
         result = []
-        for m in re.finditer(r'<a class="hg-topic-card" href="(/topics/[^"]*/)"', html):
+        for it in items or []:
             try:
-                start = m.start()
-                chunk = html[start:start + 900]
-                title = re.search(r'hg-topic-card__title[^>]*>([^<]*)', chunk)
-                vod_name = title.group(1).strip() if title else ""
-                meta = re.search(r'hg-topic-card__meta[^>]*>\s*<span>([^<]*)</span>', chunk)
-                vod_remarks = meta.group(1).strip() if meta else ""
-                pic = re.search(r'data-src="(https?://[^"]*)"', chunk)
-                vod_pic = self.proc_pic(pic.group(1) if pic else "")
-                if vod_name:
-                    result.append({
-                        "vod_id": m.group(1),
-                        "vod_name": vod_name,
-                        "vod_pic": vod_pic,
-                        "vod_remarks": vod_remarks
-                    })
+                slug = str(it.get("slug") or "").strip()
+                name = (it.get("title") or "").strip()
+                if not slug or not name:
+                    continue
+                cnt = it.get("video_count") or 0
+                result.append({
+                    "vod_id": "/topics/%s/" % slug,
+                    "vod_name": name,
+                    "vod_pic": self.proc_pic(it.get("cover") or ""),
+                    "vod_remarks": ("%d部" % cnt) if cnt else ""
+                })
             except Exception:
                 continue
         return result
@@ -266,30 +362,38 @@ class Spider(Spider):
     def extract_posts(self, html):
         result = []
         seen = set()
-        for m in re.finditer(r'<a class="hg-post-card" href="(/archives/(\d+)/)"', html):
-            try:
-                start = m.start()
-                pid = m.group(2)
-                if pid in seen:
-                    continue
-                seen.add(pid)
-                chunk = html[start:start + 1500]
-                title = re.search(r'<h3>([^<]*)</h3>', chunk)
-                vod_name = title.group(1).strip() if title else ""
-                pic = re.search(r'data-src="(https?://[^"]*)"', chunk)
-                vod_pic = self.proc_pic(pic.group(1) if pic else "")
-                meta = re.search(r'hg-post-card__cat[^>]*>([^<]*)', chunk)
-                vod_remarks = meta.group(1).strip() if meta else ""
-                if vod_name:
-                    result.append({
-                        "vod_id": m.group(1),
-                        "vod_name": vod_name,
-                        "vod_pic": vod_pic,
-                        "vod_remarks": vod_remarks
-                    })
-            except Exception:
+        for m in re.finditer(r'<a class="hg-post-card"[^>]*href="(/archives/(\d+)/)"', html):
+            pid = m.group(2)
+            if pid in seen:
                 continue
+            seen.add(pid)
+            chunk = html[m.start():m.start() + 1800]
+            title = re.search(r"<h3>([^<]*)</h3>", chunk)
+            vod_name = title.group(1).strip() if title else ""
+            if not vod_name:
+                alt = re.search(r'alt="([^"]*)"', chunk)
+                vod_name = alt.group(1).strip() if alt else ""
+            pic = re.search(r'data-src="(https?://[^"]*)"', chunk)
+            vod_pic = self.proc_pic(pic.group(1) if pic else "")
+            cat = re.search(r'hg-post-card__cat[^>]*>([^<]*)', chunk)
+            vod_remarks = cat.group(1).strip() if cat else ""
+            if vod_name:
+                result.append({
+                    "vod_id": m.group(1),
+                    "vod_name": vod_name,
+                    "vod_pic": vod_pic,
+                    "vod_remarks": vod_remarks
+                })
         return result
+
+    def _chigua_url(self, tab, page):
+        base = tab if str(tab).startswith("/") else "/chigua/"
+        base = base.rstrip("/") or "/chigua"
+        if page <= 1:
+            return base + "/"
+        if base == "/chigua":
+            return "/chigua/page/%d/" % page
+        return "%s/%d/" % (base, page)
 
     def parse_api_list(self, items):
         result = []
@@ -323,39 +427,145 @@ class Spider(Spider):
                 continue
         return result
 
+    def _t(self, s):
+        return str(s or "").replace("$", " ").replace("#", " ").strip()
+
+    def _cache_page(self, key, items):
+        videos = [it for it in (items or []) if isinstance(it, dict) and it.get("vod_id")]
+        if not videos:
+            return
+        self.page_cache[key] = videos
+        if key in self.page_keys:
+            self.page_keys.remove(key)
+        self.page_keys.append(key)
+        while len(self.page_keys) > 30:
+            old = self.page_keys.pop(0)
+            for it in self.page_cache.pop(old, []):
+                vid = str(it.get("vod_id") or "")
+                if self.page_index.get(vid) == old:
+                    self.page_index.pop(vid, None)
+        for it in videos:
+            self.page_index[str(it["vod_id"])] = key
+
+    def _src_from_vod(self, vod):
+        froms = [x for x in str((vod or {}).get("vod_play_from") or "").split("$$$") if x] or ["黄果短剧"]
+        groups = str((vod or {}).get("vod_play_url") or "").split("$$$")
+        src = []
+        for i, name in enumerate(froms):
+            eps = []
+            for p in str(groups[i] if i < len(groups) else (groups[0] if groups else "")).split("#"):
+                if not p:
+                    continue
+                n, u = p.split("$", 1) if "$" in p else ("播放", p)
+                eps.append((self._t(n), u))
+            if eps:
+                src.append((name, eps))
+        return src
+
+    def _load_src(self, vid):
+        vid = str(vid)
+        if vid in self._src_cache:
+            return self._src_cache[vid]
+        src = self._src_from_vod(self._video_vod(vid) or {})
+        if src:
+            self._src_cache[vid] = src
+        return src
+
+    def _after_items(self, vid):
+        key = self.page_index.get(str(vid))
+        items = [x for x in (self.page_cache.get(key) or []) if x.get("vod_id")]
+        ids = [str(x.get("vod_id")) for x in items]
+        if str(vid) not in ids:
+            return []
+        return items[ids.index(str(vid)) + 1:]
+
+    def _load_after(self, vid, n=10):
+        for it in self._after_items(vid)[:n]:
+            oid = str(it.get("vod_id") or "")
+            if not oid or oid in self._src_cache:
+                continue
+            try:
+                self._load_src(oid)
+            except Exception:
+                pass
+
+    def _build_page_play(self, vid, film, play_from, play_url):
+        vid, film = str(vid), self._t(film) or str(vid)
+        froms = [x for x in str(play_from or "").split("$$$") if x] or ["黄果短剧"]
+        groups = str(play_url or "").split("$$$")
+        tails, seen = [], {vid}
+        for it in self._after_items(vid):
+            oid = str(it.get("vod_id") or "")
+            if not oid or oid in seen:
+                continue
+            seen.add(oid)
+            name = self._t(it.get("vod_name")) or oid
+            src = self._src_cache.get(oid) or []
+            eps = src[0][1] if src and src[0][1] else []
+            if len(eps) > 1:
+                for en, u in eps:
+                    tails.append("%s$%s" % (self._t("%s %s" % (name, en)), u))
+            elif eps and eps[0][1] and not str(eps[0][1]).startswith("nid:"):
+                tails.append("%s$%s" % (name, eps[0][1]))
+            else:
+                tails.append("%s$nid:%s" % (name, quote(oid, safe="")))
+        tail = ("#" + "#".join(tails)) if tails else ""
+        out = []
+        for i, _n in enumerate(froms):
+            raw = str(groups[i] if i < len(groups) else (groups[0] if groups else "") or "").strip()
+            if not raw:
+                first = film + "$"
+            elif "$" in raw:
+                first = raw
+            else:
+                first = "%s$%s" % (film, raw)
+            out.append(first + tail)
+        return "$$$".join(froms), "$$$".join(out)
+
+    def _nid_url(self, vid, flag):
+        try:
+            src = self._load_src(str(vid))
+            picked = []
+            for name, eps in src:
+                if str(name) == str(flag) and eps:
+                    picked = eps
+                    break
+            if not picked and src:
+                picked = src[0][1]
+            if not picked:
+                return ""
+            return picked[0][1]
+        except Exception:
+            return ""
+
     def homeContent(self, filter):
         result = {"class": [], "filters": {}}
-        for cat in self.cat_map:
+        for cat in self._load_cats():
             result["class"].append({"type_id": cat["type_id"], "type_name": cat["type_name"]})
-            tabs = cat.get("tabs")
-            if tabs:
-                result["filters"][cat["type_id"]] = [{"key": "sub", "name": "子分类", "value": [{"n": t["n"], "v": t["v"]} for t in tabs]}]
+        result["filters"] = dict(self._cat_filters)
         result["list"] = self.homeVideoContent().get("list", [])
         return result
 
     def homeVideoContent(self):
         result = {"list": []}
-        html = self.getHtml(self.host)
-        if not html:
-            return result
-        cards = self.extract_cards(html)
-        seen = set()
-        unique = []
-        for c in cards:
-            if c["vod_id"] not in seen:
-                seen.add(c["vod_id"])
-                unique.append(c)
-        result["list"] = unique[:20]
+        d = self._api("/api/videos?page=1") or {}
+        result["list"] = self.parse_api_list(d.get("items") or [])[:20]
+        self._cache_page(("home",), result["list"])
         return result
 
     def get_tab(self, filter, extend):
         for d in (filter, extend):
+            if isinstance(d, str):
+                try:
+                    d = json.loads(d)
+                except Exception:
+                    d = None
             if isinstance(d, dict):
                 if d.get("sub"):
-                    return d.get("sub")
+                    return str(d.get("sub"))
                 inner = d.get("filter")
                 if isinstance(inner, dict) and inner.get("sub"):
-                    return inner.get("sub")
+                    return str(inner.get("sub"))
         return ""
 
     def categoryContent(self, tid, pg, filter, extend):
@@ -363,17 +573,14 @@ class Spider(Spider):
         page = int(pg) if pg else 1
         if tid and str(tid).startswith("folder_topic_"):
             return self.topicFolderList(tid, page)
-        cat = next((c for c in self.cat_map if c["type_id"] == tid or c["type_name"] == tid), None)
+        cat = next((c for c in self._load_cats() if c["type_id"] == tid or c["type_name"] == tid), None)
         if not cat:
             return result
         kind = cat.get("kind", "")
         tab = self.get_tab(filter, extend)
         if kind == "topic":
-            html = self.getHtml(self.host + cat["path"].rstrip("/") + "/")
-            if not html:
-                return result
-            topics = self.extract_topics(re.sub(r'<template[\s\S]*?</template>', '', html))
-            for t in topics:
+            d = self._api("/api/topics?page=%d" % page) or {}
+            for t in self.parse_topic_list(d.get("items") or []):
                 fid = "folder_topic_" + base64.urlsafe_b64encode(t["vod_id"].encode("utf-8")).decode("utf-8")
                 result["list"].append({
                     "vod_id": fid,
@@ -382,83 +589,52 @@ class Spider(Spider):
                     "vod_remarks": t["vod_remarks"] or "进入专辑",
                     "vod_tag": "folder"
                 })
-            result["page"] = page
-            result["limit"] = len(result["list"]) if result["list"] else 20
-            return result
-        if kind == "rank":
-            tabs = cat.get("tabs") or []
-            tc = next((t for t in tabs if t["v"] == tab), tabs[0] if tabs else None)
-            if not tc:
-                return result
-            html = self.getHtml(self.host + tc["path"])
+            self._apply_page(result, d.get("pagination") or {}, page, len(result["list"]))
+        elif kind == "rank":
+            key = tab if tab in ("hot", "potential", "recommend") else "hot"
+            d = self._api("/api/ranks/%s" % key) or {}
+            result["list"] = self.parse_rank_list(d.get("items") or [])
+            n = len(result["list"])
+            result["page"] = 1
+            result["pagecount"] = 1
+            result["limit"] = n or 20
+            result["total"] = n
+        elif kind == "chigua":
+            html = self.getHtml(self.host + self._chigua_url(tab, page))
             if not html:
                 return result
-            result["list"] = self.extract_rank(html)
-            result["page"] = page
-            return result
-        if kind == "chigua":
-            tabs = cat.get("tabs") or []
-            tc = next((t for t in tabs if t["v"] == tab), tabs[0] if tabs else None)
-            if not tc:
-                return result
-            base = tc["path"].rstrip("/")
-            if page <= 1:
-                url = self.host + base + "/"
-            else:
-                url = self.host + base + "/%d/" % page
-            html = self.getHtml(url)
-            if not html:
-                return result
-            result["list"] = self.extract_posts(re.sub(r'<template[\s\S]*?</template>', '', html))
-            total_m = re.search(r'共 (\d+) 条', html)
-            if total_m:
-                result["total"] = int(total_m.group(1))
-            page_m = re.search(r'第 (\d+)/(\d+) 页', html)
-            if page_m:
-                result["page"] = int(page_m.group(1))
-                result["pagecount"] = int(page_m.group(2))
+            result["list"] = self.extract_posts(html)
+            page_m = re.search(r"第\s*(\d+)/(\d+)\s*页", html)
+            total_m = re.search(r"共\s*(\d+)\s*条", html)
+            result["page"] = int(page_m.group(1)) if page_m else page
+            result["pagecount"] = int(page_m.group(2)) if page_m else 1
+            result["total"] = int(total_m.group(1)) if total_m else len(result["list"])
             result["limit"] = len(result["list"]) if result["list"] else 20
-            return result
-        tabs = cat.get("tabs") or []
-        tc = next((t for t in tabs if t["v"] == tab), tabs[0] if tabs else None)
-        if not tc:
-            return result
-        url = "%s/api/videos/category/%s?page=%d" % (self.host, cat.get("api", cat["type_id"]), page)
-        if tc.get("q"):
-            url += "&" + tc["q"]
-        html = self.getHtml(url)
-        if not html:
-            return result
-        try:
-            data = json.loads(html)
-        except Exception:
-            data = None
-        if data and isinstance(data.get("data"), dict):
-            d = data["data"]
+        elif kind == "author":
+            aid = tab if str(tab).isdigit() else "156291"
+            d = self._api("/api/videos/user/%s?page=%d" % (aid, page)) or {}
             result["list"] = self.parse_api_list(d.get("items") or [])
-            pgd = d.get("pagination") or {}
-            result["page"] = pgd.get("page") or page
-            result["pagecount"] = pgd.get("pages") or 1
-            result["total"] = pgd.get("total") or 0
-            result["limit"] = pgd.get("size") or 20
+            self._apply_page(result, d.get("pagination") or {}, page, len(result["list"]))
+        else:
+            qmap = {"latest": "sort=latest", "hot": "", "original": "is_original=1", "random": "sort=random&size=20"}
+            q = qmap.get(tab, "sort=latest")
+            url = "/api/videos/category/%s?page=%d" % (cat.get("api") or cat["type_id"], page)
+            if q:
+                url += "&" + q
+            d = self._api(url) or {}
+            result["list"] = self.parse_api_list(d.get("items") or [])
+            self._apply_page(result, d.get("pagination") or {}, page, len(result["list"]))
+        self._cache_page(("cate", str(tid), str(page), str(extend)), result.get("list"))
         return result
 
-    def detailContent(self, ids):
-        result = {"list": []}
-        vid = ids[0] if isinstance(ids, list) else ids
-        if isinstance(vid, str) and vid.startswith("folder_topic_"):
-            return self.topicFolderDetail(vid)
-        if isinstance(vid, str) and (vid.startswith("/topics/") or vid.startswith("/archives/")):
-            if vid.startswith("/topics/"):
-                return self.topicDetail(vid)
-            return self.postDetail(vid)
-        m = re.search(r'(\d+)', vid)
+    def _video_vod(self, vid):
+        m = re.search(r'(\d+)', str(vid or ""))
         if not m:
-            return result
+            return None
         vid = m.group(1)
         html = self.getHtml("%s/detail/%s/" % (self.host, vid))
         if not html:
-            return result
+            return None
         vod = {"vod_id": vid}
         title = re.search(r'<title>([^|<]*)', html)
         if title:
@@ -501,6 +677,29 @@ class Spider(Spider):
             else:
                 vod["vod_play_from"] = "黄果短剧"
                 vod["vod_play_url"] = "第01集$/video/%s/" % vid
+        return vod
+
+    def detailContent(self, ids):
+        result = {"list": []}
+        vid = ids[0] if isinstance(ids, list) else ids
+        if isinstance(vid, str) and vid.startswith("nid:"):
+            vid = unquote(vid[4:])
+        if isinstance(vid, str) and vid.startswith("folder_topic_"):
+            return self.topicFolderDetail(vid)
+        if isinstance(vid, str) and (vid.startswith("/topics/") or vid.startswith("/archives/")):
+            if vid.startswith("/topics/"):
+                return self.topicDetail(vid)
+            return self.postDetail(vid)
+        vod = self._video_vod(vid)
+        if not vod:
+            return result
+        oid = str(vod.get("vod_id") or vid)
+        src = self._src_from_vod(vod)
+        if src:
+            self._src_cache[oid] = src
+        self._load_after(oid)
+        vod["vod_play_from"], vod["vod_play_url"] = self._build_page_play(
+            oid, vod.get("vod_name") or "", vod.get("vod_play_from"), vod.get("vod_play_url"))
         result["list"] = [vod]
         return result
 
@@ -510,18 +709,11 @@ class Spider(Spider):
             path = base64.urlsafe_b64decode(tid[len("folder_topic_"):].encode("utf-8")).decode("utf-8")
         except Exception:
             return result
-        html = self.getHtml(self.fix_url(path))
-        if not html:
-            return result
-        cards = self.extract_cards(re.sub(r'<template[\s\S]*?</template>', '', html))
-        seen = set()
-        unique = []
-        for c in cards:
-            if c["vod_id"] not in seen:
-                seen.add(c["vod_id"])
-                unique.append(c)
-        result["list"] = unique
-        result["limit"] = len(unique) if unique else 20
+        slug = str(path).strip("/").split("/")[-1]
+        d = self._api("/api/topics/%s?page=%d" % (slug, page)) or {}
+        videos = d.get("videos") if isinstance(d.get("videos"), dict) else {}
+        result["list"] = self.parse_api_list(videos.get("items") or [])
+        self._apply_page(result, videos.get("pagination") or {}, page, len(result["list"]))
         return result
 
     def topicFolderDetail(self, tid):
@@ -626,10 +818,13 @@ class Spider(Spider):
         if total:
             result["total"] = int(total.group(1))
         result["page"] = page
+        self._cache_page(("search", str(key), str(page)), result.get("list"))
         return result
 
     def playerContent(self, flag, id, vipFlags):
         result = {"parse": 0, "playUrl": "", "url": "", "header": ""}
+        if isinstance(id, str) and id.startswith("nid:"):
+            id = self._nid_url(unquote(id[4:]), flag)
         if isinstance(id, str) and id.startswith("folder_topic_"):
             return {"parse": 1, "url": id, "header": {}}
         play_url = self.fix_url(id) if id else ""
@@ -794,348 +989,3 @@ class Spider(Spider):
         if typ == "key":
             return self._proxy_key(url)
         return self._proxy_pic(url)
-
-# ===== PAGE_PLAYLIST_START =====
-def _pl_install(_C):
-    if getattr(_C, "_pl_patched", False):
-        return _C
-    _C._pl_patched = True
-    _orig_init = getattr(_C, "init", None)
-    _orig_home = getattr(_C, "homeContent", None)
-    _orig_homev = getattr(_C, "homeVideoContent", None)
-    _orig_cate = getattr(_C, "categoryContent", None)
-    _orig_detail = getattr(_C, "detailContent", None)
-    _orig_search = getattr(_C, "searchContent", None)
-    _orig_searchp = getattr(_C, "searchContentPage", None)
-    _orig_player = getattr(_C, "playerContent", None)
-
-    def _ensure(self):
-        if not hasattr(self, "page_cache"):
-            self.page_cache = {}
-            self.page_index = {}
-            self.page_keys = []
-            self._src_cache = {}
-
-    def _clean(s):
-        return str(s or "").replace("$", " ").replace("#", " ").strip()
-
-    def _enc(s):
-        try:
-            from urllib.parse import quote
-            return quote(str(s or ""), safe="")
-        except Exception:
-            return str(s or "")
-
-    def _dec(s):
-        try:
-            from urllib.parse import unquote
-            return unquote(str(s or ""))
-        except Exception:
-            return str(s or "")
-
-    def _cache_page(self, key, items):
-        _ensure(self)
-        out = []
-        for x in items or []:
-            if isinstance(x, dict) and x.get("vod_id"):
-                out.append(x)
-        if not out:
-            return
-        self.page_cache[key] = out
-        if key in self.page_keys:
-            self.page_keys.remove(key)
-        self.page_keys.append(key)
-        for it in out:
-            self.page_index[str(it["vod_id"])] = key
-        while len(self.page_keys) > 30:
-            old = self.page_keys.pop(0)
-            self.page_cache.pop(old, None)
-
-    def _page_of(self, vid):
-        _ensure(self)
-        key = self.page_index.get(str(vid))
-        if key in self.page_cache:
-            return list(self.page_cache[key])
-        return []
-
-    def _as_result(r):
-        if r is None:
-            return {}
-        if isinstance(r, dict):
-            return r
-        if isinstance(r, (bytes, bytearray)):
-            r = r.decode("utf-8", "ignore")
-        if isinstance(r, str):
-            s = r.strip()
-            if s.startswith("{") or s.startswith("["):
-                try:
-                    import json as _j
-                    return _j.loads(s)
-                except Exception:
-                    return {}
-        return {}
-
-    def _split_sources(vod):
-        fr = str((vod or {}).get("vod_play_from") or "").split("$$$")
-        ur = str((vod or {}).get("vod_play_url") or "").split("$$$")
-        while len(ur) < len(fr):
-            ur.append("")
-        sources = []
-        for i, name in enumerate(fr):
-            parts = []
-            for p in (ur[i] or "").split("#"):
-                if not p:
-                    continue
-                if "$" in p:
-                    n, u = p.split("$", 1)
-                else:
-                    n, u = str(i + 1), p
-                parts.append((_clean(n), u))
-            sources.append((_clean(name) or ("线路%d" % (i + 1)), parts))
-        return [x for x in sources if x[1]]
-
-    def _call_detail(self, vid):
-        if not _orig_detail:
-            return {}
-        try:
-            return _as_result(_orig_detail(self, [vid]))
-        except TypeError:
-            try:
-                return _as_result(_orig_detail(self, vid))
-            except Exception:
-                return {}
-        except Exception:
-            return {}
-
-    def _load_src(self, vid):
-        _ensure(self)
-        vid = str(vid)
-        if vid in self._src_cache:
-            return self._src_cache[vid]
-        r = self._pl_call_detail(vid)
-        vod = ((r.get("list") or [None])[0]) or {}
-        sources = _split_sources(vod)
-        self._src_cache[vid] = sources
-        return sources
-
-    def _item_parts(self, it, src_idx, current_sources, current_vid):
-        iid = str(it.get("vod_id") or "")
-        if not iid:
-            return []
-        name = _clean(it.get("vod_name") or iid) or iid
-        if iid == str(current_vid):
-            eps = []
-            if current_sources:
-                if src_idx < len(current_sources) and current_sources[src_idx][1]:
-                    eps = current_sources[src_idx][1]
-                else:
-                    eps = current_sources[0][1]
-            if len(eps) > 1:
-                out = []
-                for i, (en, u) in enumerate(eps):
-                    label = _clean("%s %s" % (name, en or ("%02d" % (i + 1))))
-                    out.append("%s$%s" % (label, u))
-                return out
-            if eps:
-                return ["%s$%s" % (name, eps[0][1])]
-            return ["%s$nid:%s" % (name, _enc(iid))]
-        return ["%s$nid:%s" % (name, _enc(iid))]
-
-    def _apply_playlist(self, vid, vod, items):
-        sources = _split_sources(vod)
-        _ensure(self)
-        self._src_cache[str(vid)] = sources
-        if not items:
-            return vod
-        ordered = [x for x in items if str(x.get("vod_id")) == str(vid)]
-        ordered += [x for x in items if str(x.get("vod_id")) != str(vid)]
-        plist, seen = [], set()
-        for it in ordered:
-            iid = str(it.get("vod_id") or "")
-            if not iid or iid in seen:
-                continue
-            seen.add(iid)
-            plist.append(it)
-        if not plist:
-            return vod
-        if not sources:
-            sources = [("线路1", [("播放", "nid:%s" % _enc(vid))])]
-        play_from, play_urls = [], []
-        for i, (sname, _eps) in enumerate(sources):
-            parts = []
-            for it in plist:
-                parts.extend(self._pl_item_parts(it, i, sources, vid))
-            if not parts:
-                continue
-            play_from.append(sname or ("线路%d" % (i + 1)))
-            play_urls.append("#".join(parts))
-        if not play_from:
-            return vod
-        vod = dict(vod)
-        vod["vod_play_from"] = "$$$".join(play_from)
-        vod["vod_play_url"] = "$$$".join(play_urls)
-        return vod
-
-    def init(self, *args, **kwargs):
-        _ensure(self)
-        if _orig_init:
-            return _orig_init(self, *args, **kwargs)
-
-    def homeContent(self, *args, **kwargs):
-        _ensure(self)
-        r = _orig_home(self, *args, **kwargs) if _orig_home else {}
-        try:
-            _cache_page(self, ("home",), _as_result(r).get("list"))
-        except Exception:
-            pass
-        return r
-
-    def homeVideoContent(self, *args, **kwargs):
-        _ensure(self)
-        r = _orig_homev(self, *args, **kwargs) if _orig_homev else {"list": []}
-        try:
-            _cache_page(self, ("homev",), _as_result(r).get("list"))
-        except Exception:
-            pass
-        return r
-
-    def categoryContent(self, *args, **kwargs):
-        _ensure(self)
-        r = _orig_cate(self, *args, **kwargs) if _orig_cate else {"list": []}
-        try:
-            tid = args[0] if args else kwargs.get("tid", "")
-            pg = args[1] if len(args) > 1 else kwargs.get("pg", "1")
-            ext = args[3] if len(args) > 3 else kwargs.get("extend", "")
-            _cache_page(self, ("cate", str(tid), str(pg), str(ext)), _as_result(r).get("list"))
-        except Exception:
-            pass
-        return r
-
-    def searchContent(self, *args, **kwargs):
-        _ensure(self)
-        if not _orig_search:
-            return {"list": []}
-        r = _orig_search(self, *args, **kwargs)
-        try:
-            key = args[0] if args else kwargs.get("key", "")
-            pg = args[2] if len(args) > 2 else kwargs.get("pg", "1")
-            _cache_page(self, ("search", str(key), str(pg)), _as_result(r).get("list"))
-        except Exception:
-            pass
-        return r
-
-    def searchContentPage(self, *args, **kwargs):
-        _ensure(self)
-        if not _orig_searchp:
-            return {"list": []}
-        r = _orig_searchp(self, *args, **kwargs)
-        try:
-            key = args[0] if args else kwargs.get("key", "")
-            pg = args[2] if len(args) > 2 else kwargs.get("page", kwargs.get("pg", "1"))
-            _cache_page(self, ("searchp", str(key), str(pg)), _as_result(r).get("list"))
-        except Exception:
-            pass
-        return r
-
-    def detailContent(self, ids, *args, **kwargs):
-        _ensure(self)
-        if isinstance(ids, (list, tuple)):
-            vid = str(ids[0]) if ids else ""
-            call_ids = list(ids)
-        else:
-            vid = str(ids)
-            call_ids = [vid]
-        if vid.startswith("nid:"):
-            vid = _dec(vid[4:])
-            call_ids[0] = vid
-        cached = _page_of(self, vid)
-        if _orig_detail:
-            try:
-                r = _orig_detail(self, call_ids, *args, **kwargs)
-            except TypeError:
-                r = _orig_detail(self, call_ids)
-        else:
-            r = {"list": []}
-        try:
-            rr = _as_result(r)
-            lst = rr.get("list") or []
-            if not lst or not isinstance(lst[0], dict):
-                return r
-            vod = dict(lst[0])
-            vod["vod_id"] = str(vod.get("vod_id") or vid)
-            if not vod.get("vod_name"):
-                hit = next((x for x in cached if str(x.get("vod_id")) == vid), None)
-                if hit:
-                    vod["vod_name"] = hit.get("vod_name") or vid
-            if cached:
-                vod = self._pl_apply_playlist(vid, vod, cached)
-            rr = dict(rr)
-            rr["list"] = [vod]
-            if isinstance(r, dict) or r is None:
-                return rr
-            try:
-                import json as _j
-                return _j.dumps(rr, ensure_ascii=False)
-            except Exception:
-                return rr
-        except Exception:
-            return r
-
-    def playerContent(self, flag, id, vipFlags=None, *args, **kwargs):
-        _ensure(self)
-        s = str(id)
-        if s.startswith("nid:"):
-            vid = _dec(s[4:])
-            sources = self._pl_load_src(vid)
-            real = ""
-            if sources:
-                picked = None
-                for name, eps in sources:
-                    if str(name) == str(flag) and eps:
-                        picked = eps
-                        break
-                if not picked:
-                    picked = sources[0][1]
-                if picked:
-                    real = picked[0][1]
-            if real and not str(real).startswith("nid:"):
-                id = real
-            else:
-                id = vid
-        if not _orig_player:
-            return {"parse": 0, "url": id}
-        try:
-            return _orig_player(self, flag, id, vipFlags, *args, **kwargs)
-        except TypeError:
-            try:
-                return _orig_player(self, flag, id, vipFlags)
-            except TypeError:
-                return _orig_player(self, flag, id)
-
-    _C._pl_call_detail = _call_detail
-    _C._pl_load_src = _load_src
-    _C._pl_item_parts = _item_parts
-    _C._pl_apply_playlist = _apply_playlist
-    if _orig_init:
-        _C.init = init
-    if _orig_home:
-        _C.homeContent = homeContent
-    if _orig_homev:
-        _C.homeVideoContent = homeVideoContent
-    if _orig_cate:
-        _C.categoryContent = categoryContent
-    if _orig_search:
-        _C.searchContent = searchContent
-    if _orig_searchp:
-        _C.searchContentPage = searchContentPage
-    if _orig_detail:
-        _C.detailContent = detailContent
-    if _orig_player:
-        _C.playerContent = playerContent
-    return _C
-
-try:
-    _pl_install(Spider)
-except Exception:
-    pass
-# ===== PAGE_PLAYLIST_END =====

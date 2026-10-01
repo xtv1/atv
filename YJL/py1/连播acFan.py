@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding=utf-8
 #发任意消息到邮箱，自动获取回家地址
-#邮箱地址： acfancom430@gmail.com
+#邮箱地址： acfancom430@gmail.com  lianzz62825@gmail.com  https://t.me/+zwjuX1_DgPs2M2I1
 import re, json, requests
 from urllib.parse import quote, unquote
 
@@ -14,7 +14,6 @@ except Exception:
 class Spider(BaseSpider):
     def __init__(self):
         self.host = "https://acf.f76typd0.work"
-        self.hosts = ["https://acf.f76typd0.work"]
         self.name = "AcFan"
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Linux; Android 12; SM-G9750 Build/SP1A.210812.016; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/89.0.4389.72 MQQBrowser/6.2 TBS/046279 Mobile Safari/537.36",
@@ -54,7 +53,29 @@ class Spider(BaseSpider):
         self.default_pic = self.host + "/images/default-cover.svg"
 
     def init(self, extend=""):
-        pass
+        import time
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        try:
+            urls = list(dict.fromkeys(u.rstrip("/") for u in re.findall(
+                r'href="(https://[^"]+\.work/?)"', self.session.get("https://acfansm01.com/", timeout=6, verify=False).text)))
+            def ping(u):
+                t = time.time()
+                r = requests.get(u + "/", headers=self.headers, timeout=4, verify=False)
+                return (time.time() - t, u) if r.status_code == 200 and "/watch/CNT" in r.text else (9, "")
+            best = (9, self.host)
+            with ThreadPoolExecutor(max_workers=8) as ex:
+                for f in as_completed([ex.submit(ping, u) for u in urls]):
+                    try:
+                        best = min(best, f.result())
+                    except Exception:
+                        pass
+            if best[1]:
+                self.host = best[1]
+                self.headers["Referer"] = self.host + "/"
+                self.default_pic = self.host + "/images/default-cover.svg"
+                self.session.headers.update(self.headers)
+        except Exception:
+            pass
 
     def proxy_img(self, url):
         if not url or not url.startswith("http") or "127.0.0.1" in url or "/media-proxy" in url:
@@ -92,16 +113,14 @@ class Spider(BaseSpider):
         page = int(pg) if pg and str(pg).isdigit() else 1
         path = self.cat_path.get(tid, "")
         if not path:
-            return {"page": page, "pagecount": 1, "limit": 24, "total": 0, "list": []}
+            return {"page": page, "pagecount": 1, "limit": 20, "total": 0, "list": []}
+        url = self.host + "/category/" + path
         if page > 1:
-            url = self.host + "/category/" + path + "/page/" + str(page)
-        else:
-            url = self.host + "/category/" + path
-        html = self.fetch(url)
-        pages = [int(p) for p in re.findall(r"/category/[^\"']+/page/(\d+)", html)]
-        pc = max(pages) if pages else 1
+            url += "/page/" + str(page)
+        html = self.fetch(url + "?layout=H5&pageSize=20")
         data = self.parseList(html)
-        return {"page": page, "pagecount": pc, "limit": 24, "total": pc * 24, "list": data}
+        pc = page + 1 if len(data) >= 20 else page
+        return {"page": page, "pagecount": pc, "limit": 20, "total": pc * 20, "list": data}
 
     def detailContent(self, ids):
         sid = ids[0] if ids else ""
@@ -128,7 +147,7 @@ class Spider(BaseSpider):
                             vod_name = item.get("name", vod_name)
                             vod_content = item.get("description", "")
                             vod_pic = item.get("thumbnailUrl", "")
-                            m3u8 = item.get("contentUrl", "")
+                            m3u8 = item.get("contentUrl", "") or m3u8
                         elif t == "BreadcrumbList":
                             els = item.get("itemListElement", [])
                             if len(els) >= 2:
@@ -146,7 +165,18 @@ class Spider(BaseSpider):
         vod_content = (vod_content + "\n" + tag_text).strip() if vod_content else tag_text
         if cat_name:
             vod_content = "分类: " + cat_name + "\n" + vod_content
-        play_url = ("播放$" + m3u8) if m3u8 else ""
+        if not m3u8:
+            mm = re.search(r'https?://[^"\'\\\s]+\.m3u8[^"\'\\\s]*', html)
+            m3u8 = mm.group(0) if mm else ""
+        play_parts, seen_ep = [], set()
+        for cha_id, label, active in re.findall(r'\\"id\\":\\"(CHA\d+)\\",\\"label\\":\\"([^\\"]+)\\",\\"href\\":\\"/watch/CHA\d+\\",\\"active\\":(true|false)', html):
+            if cha_id in seen_ep:
+                continue
+            seen_ep.add(cha_id)
+            play_parts.append("%s$%s" % (label, m3u8 if (active == "true" and m3u8) else cha_id))
+        if not play_parts and m3u8:
+            play_parts.append("播放$" + m3u8)
+        play_url = "#".join(play_parts)
         return {"list": [{
             "vod_id": sid, "vod_name": vod_name, "vod_pic": self.proxy_img(vod_pic),
             "vod_content": vod_content, "vod_play_from": "AcFan",
@@ -156,29 +186,20 @@ class Spider(BaseSpider):
     def searchContent(self, key, quick, pg="1"):
         page = int(pg) if str(pg).isdigit() else 1
         wd = quote(key)
-        html = self.fetch(self.host + "/search?q=" + wd + "&page=" + str(page))
-        pages = [int(p) for p in re.findall(r"/search\?page=(\d+)", html)]
-        pc = max(pages) if pages else 1
-        return {"list": self.parseList(html), "page": page, "pagecount": pc, "limit": 24, "total": pc * 24}
+        html = self.fetch(self.host + "/search?q=" + wd + "&page=" + str(page) + "&layout=H5&pageSize=20")
+        data = self.parseList(html)
+        pc = page + 1 if len(data) >= 20 else page
+        return {"list": data, "page": page, "pagecount": pc, "limit": 20, "total": pc * 20}
 
     def playerContent(self, flag, id, vipFlags):
-        sid = id or ""
+        sid = str(id or "").split("$")[-1]
         ps = sid.split("@@@")
         url = ps[1] if len(ps) > 1 else sid
         if self.isVideoFormat(url):
             return {"parse": 0, "url": url, "header": self.headers}
         html = self.fetch(self.host + "/watch/" + ps[0])
-        m3u8 = ""
-        for jm in re.finditer(r'<script[^>]*type="application/ld\+json"[^>]*>(.*?)</script>', html, re.S):
-            try:
-                data = json.loads(jm.group(1))
-                if isinstance(data, list):
-                    for item in data:
-                        if item.get("@type") == "VideoObject":
-                            m3u8 = item.get("contentUrl", "")
-                            break
-            except:
-                pass
+        mm = re.search(r'https?://[^"\'\\\s]+\.m3u8[^"\'\\\s]*', html)
+        m3u8 = mm.group(0) if mm else ""
         if m3u8:
             return {"parse": 0, "url": m3u8, "header": self.headers}
         return {"parse": 1, "url": url, "header": self.headers}
@@ -290,18 +311,6 @@ class Spider(BaseSpider):
         text = re.sub(r"<[^>]+>", " ", text or "")
         text = re.sub(r"\s+", " ", text)
         return text.strip()
-
-    def fix(self, url):
-        url = (url or "").strip().replace("\\/", "/")
-        if not url:
-            return ""
-        if url.startswith("//"):
-            return "https:" + url
-        if url.startswith("http"):
-            return url
-        if url.startswith("/"):
-            return self.host + url
-        return url
 
 # ===== PAGE_PLAYLIST_START =====
 def _pl_install(_C):
@@ -426,27 +435,60 @@ def _pl_install(_C):
         self._src_cache[vid] = sources
         return sources
 
+    def _prefetch_src(self, items, keep_vid, limit=10):
+        _ensure(self)
+        unknown = []
+        for it in items or []:
+            iid = str(it.get("vod_id") or "")
+            if not iid or iid == str(keep_vid) or iid in self._src_cache:
+                continue
+            unknown.append(iid)
+            if len(unknown) >= limit:
+                break
+        if not unknown:
+            return
+        ex = None
+        try:
+            from concurrent.futures import ThreadPoolExecutor, wait
+            ex = ThreadPoolExecutor(max_workers=min(4, len(unknown)))
+            futs = [ex.submit(_load_src, self, iid) for iid in unknown]
+            wait(futs, timeout=8)
+        except Exception:
+            for iid in unknown[:4]:
+                try:
+                    _load_src(self, iid)
+                except Exception:
+                    pass
+        finally:
+            if ex:
+                try:
+                    ex.shutdown(wait=False)
+                except Exception:
+                    pass
+
     def _item_parts(self, it, src_idx, current_sources, current_vid):
         iid = str(it.get("vod_id") or "")
         if not iid:
             return []
         name = _clean(it.get("vod_name") or iid) or iid
         if iid == str(current_vid):
-            eps = []
-            if current_sources:
-                if src_idx < len(current_sources) and current_sources[src_idx][1]:
-                    eps = current_sources[src_idx][1]
-                else:
-                    eps = current_sources[0][1]
-            if len(eps) > 1:
-                out = []
-                for i, (en, u) in enumerate(eps):
-                    label = _clean("%s %s" % (name, en or ("%02d" % (i + 1))))
-                    out.append("%s$%s" % (label, u))
-                return out
-            if eps:
-                return ["%s$%s" % (name, eps[0][1])]
-            return ["%s$nid:%s" % (name, _enc(iid))]
+            sources = current_sources
+        else:
+            sources = self._src_cache.get(iid) or []
+        eps = []
+        if sources:
+            if src_idx < len(sources) and sources[src_idx][1]:
+                eps = sources[src_idx][1]
+            else:
+                eps = sources[0][1]
+        if len(eps) > 1:
+            out = []
+            for i, (en, u) in enumerate(eps):
+                label = _clean("%s %s" % (name, en or ("%02d" % (i + 1))))
+                out.append("%s$%s" % (label, u))
+            return out
+        if eps and (iid == str(current_vid) or (eps[0][1] and not str(eps[0][1]).startswith("nid:"))):
+            return ["%s$%s" % (name, eps[0][1])]
         return ["%s$nid:%s" % (name, _enc(iid))]
 
     def _apply_playlist(self, vid, vod, items):
@@ -455,8 +497,8 @@ def _pl_install(_C):
         self._src_cache[str(vid)] = sources
         if not items:
             return vod
-        ordered = [x for x in items if str(x.get("vod_id")) == str(vid)]
-        ordered += [x for x in items if str(x.get("vod_id")) != str(vid)]
+        idx = next((i for i, x in enumerate(items) if str(x.get("vod_id")) == str(vid)), 0)
+        ordered = items[idx:]
         plist, seen = [], set()
         for it in ordered:
             iid = str(it.get("vod_id") or "")
@@ -466,6 +508,35 @@ def _pl_install(_C):
             plist.append(it)
         if not plist:
             return vod
+        key = self.page_index.get(str(vid))
+        while key and len(plist) < 11:
+            try:
+                if key[0] == "cate" and _orig_cate:
+                    nxt = ("cate", key[1], str(int(key[2]) + 1), key[3])
+                    r = _orig_cate(self, nxt[1], nxt[2], False, nxt[3])
+                elif key[0] == "search" and _orig_search:
+                    nxt = ("search", key[1], str(int(key[2]) + 1))
+                    r = _orig_search(self, nxt[1], False, nxt[2])
+                else:
+                    break
+            except Exception:
+                break
+            more = _as_result(r).get("list") or []
+            if not more:
+                break
+            _cache_page(self, nxt, more)
+            key = nxt
+            n0 = len(plist)
+            for it in more:
+                if len(plist) >= 11:
+                    break
+                iid = str(it.get("vod_id") or "")
+                if iid and iid not in seen:
+                    seen.add(iid)
+                    plist.append(it)
+            if len(plist) == n0:
+                break
+        _prefetch_src(self, plist, vid)
         if not sources:
             sources = [("线路1", [("播放", "nid:%s" % _enc(vid))])]
         play_from, play_urls = [], []
@@ -591,7 +662,7 @@ def _pl_install(_C):
 
     def playerContent(self, flag, id, vipFlags=None, *args, **kwargs):
         _ensure(self)
-        s = str(id)
+        s = str(id).split("$")[-1]
         if s.startswith("nid:"):
             vid = _dec(s[4:])
             sources = self._pl_load_src(vid)

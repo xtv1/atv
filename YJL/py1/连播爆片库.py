@@ -1,5 +1,7 @@
 # coding=utf-8
 # !/python
+# 本站经常更换域名，请务必收藏牢记
+# www.j8daohang.com
 import sys
 import json
 import re

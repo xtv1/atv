@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#神秘
+#神秘自动回复邮箱：sm@sm.vip
 import re
 import urllib.parse
 from base.spider import Spider as BaseSpile

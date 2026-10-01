@@ -233,15 +233,6 @@ class Spider(BaseSpider):
                 self.viaproxy = True
         return r if isinstance(r, dict) else {}
 
-    def _video_info(self, vid):
-        for path in ("/video/video_info", "/video/video_info_v3"):
-            r = self._call(path, {"video_id": vid, "uid": self.uid, "is_h5": 1})
-            if r.get("code") == 1:
-                cand = (r.get("data") or {}).get("video_info") or {}
-                if cand.get("url") or cand.get("video_line"):
-                    return cand
-        return {}
-
     def _full(self, url):
         u = str(url or "")
         if ".m3u8" not in u:
@@ -466,12 +457,14 @@ class Spider(BaseSpider):
             return b""
 
     def _vod(self, it):
+        vid = it.get("video_id") or it.get("id") or ""
+        name = it.get("title") or it.get("video_title") or it.get("name") or ""
+        pic = it.get("img") or it.get("video_img") or it.get("cover") or it.get("icon") or ""
         rem = str(it.get("video_time") or it.get("time") or "")
         pn = it.get("play_num") or it.get("video_play_num")
         if pn:
             rem = ("%s %s" % (rem, self._num(pn))).strip()
-        return {"vod_id": self._item_id(it), "vod_name": self._item_title(it),
-                "vod_pic": self._img(self._item_pic(it)), "vod_remarks": rem}
+        return {"vod_id": str(vid), "vod_name": str(name), "vod_pic": self._img(pic), "vod_remarks": rem}
 
     def _pic_raw(self, it):
         return str(it.get("img") or it.get("cover") or it.get("image") or it.get("image_url") or it.get("icon") or it.get("pic") or "")
@@ -522,6 +515,16 @@ class Spider(BaseSpider):
             return [v.strip()]
         return []
 
+    def _data_list(self, r):
+        d = r.get("data") if isinstance(r, dict) else r
+        if isinstance(d, list):
+            return d
+        if isinstance(d, dict):
+            for k in ("list", "data", "items", "rows"):
+                if isinstance(d.get(k), list):
+                    return d[k]
+        return self._pick(d)
+
     def _pick(self, obj):
         if isinstance(obj, list):
             return obj
@@ -547,7 +550,19 @@ class Spider(BaseSpider):
         return out
 
     def _dedup(self, items):
-        return [self._vod(it) for it in self._raw_videos(items)]
+        seen, out = set(), []
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            try:
+                v = self._vod(it)
+            except Exception:
+                continue
+            if not v["vod_id"] or not v["vod_name"] or v["vod_id"] in seen:
+                continue
+            seen.add(v["vod_id"])
+            out.append(v)
+        return out
 
     def homeContent(self, filter):
         d = self._call("/video/index", {}).get("data") or {}
@@ -564,8 +579,9 @@ class Spider(BaseSpider):
         vl = []
         for b in (d.get("recommend_list") or []):
             vl += b.get("list") or []
-        self._short_cache_put("home", 1, vl)
-        return {"class": cls, "filters": self._filters(cls), "list": self._dedup(vl)}
+        raw = self._raw_videos(vl)
+        self._short_cache_put("home", 1, raw)
+        return {"class": cls, "filters": self._filters(cls), "list": [self._vod(it) for it in raw]}
 
     def _filters(self, cls):
         f = {}
@@ -613,7 +629,7 @@ class Spider(BaseSpider):
         cates = self._dy_cates()
         mid = (len(cates) + 1) // 2
         return [
-            {"key": "dy1", "name": "专题", "value": [{"n": "推荐", "v": ""}] + cates[:mid]},
+            {"key": "dy1", "name": "专题", "value": cates[:mid]},
             {"key": "dy2", "name": "专题", "value": cates[mid:]},
         ]
 
@@ -658,6 +674,10 @@ class Spider(BaseSpider):
         return out
 
     def _short_cache_put(self, bucket, page, items):
+        if not hasattr(self, "short_pages"):
+            self.short_pages = {}
+        if not hasattr(self, "short_index"):
+            self.short_index = {}
         raw = self._raw_videos(items)
         self.short_pages[(str(bucket), int(page))] = raw
         for it in raw:
@@ -666,10 +686,11 @@ class Spider(BaseSpider):
                 self.short_index[iid] = (str(bucket), int(page))
 
     def _short_cache_get(self, vid):
-        key = self.short_index.get(str(vid))
-        if key in self.short_pages:
-            return self.short_pages[key]
-        for pack in self.short_pages.values():
+        pages = getattr(self, "short_pages", {}) or {}
+        key = getattr(self, "short_index", {}).get(str(vid))
+        if key in pages:
+            return pages[key]
+        for pack in pages.values():
             for it in pack or []:
                 if self._item_id(it) == str(vid):
                     return pack
@@ -698,10 +719,12 @@ class Spider(BaseSpider):
         pc = pg + 1 if len(vl) >= 36 else pg
         return {"list": vl, "page": pg, "pagecount": pc, "limit": 36, "total": pc * 36}
 
-    def _dy_ep_name(self, title, idx, total):
+    def _dy_ep_name(self, title, idx, total, current=False):
         name = str(title or idx).replace("#", " ").replace("$", " ").strip() or str(idx)
         if total > 1:
-            return "%s %02d" % (name, idx)
+            name = "%02d %s" % (idx, name)
+        if current:
+            name = "%s [当前]" % name
         return name
 
     def _tags_text(self, it):
@@ -713,21 +736,38 @@ class Spider(BaseSpider):
     def _play_detail(self, vid, vod_id=None, type_name=""):
         clicked = str(vid)
         items = list(self._short_cache_get(clicked) or [])
-        head = [it for it in items if self._item_id(it) == clicked]
-        if not head:
+        ordered, seen = [], set()
+        pos = -1
+        for it in items:
+            iid = self._item_id(it)
+            if not iid or iid in seen:
+                continue
+            seen.add(iid)
+            if iid == clicked:
+                pos = len(ordered)
+            ordered.append(it)
+        if pos < 0:
             return None
-        ordered = head + [it for it in items if self._item_id(it) != clicked]
         total = len(ordered)
-        it0 = ordered[0]
-        urls = ["%s$%s" % (self._dy_ep_name(self._item_title(it) or self._item_id(it), i, total), self._item_url(it))
-                for i, it in enumerate(ordered, 1)]
-        vod = {"vod_id": vod_id or clicked, "vod_name": self._item_title(it0) or clicked,
-               "vod_pic": self._img(self._item_pic(it0)), "type_name": type_name,
-               "vod_remarks": str(it0.get("time_len") or it0.get("video_time") or it0.get("time") or ""),
+        it0 = ordered[pos]
+        vname = self._item_title(it0) or clicked
+        urls = []
+        for i, it in enumerate(ordered, 1):
+            title = self._item_title(it) or self._item_id(it)
+            urls.append("%s$%s" % (self._dy_ep_name(title, i, total, i - 1 == pos), self._item_url(it)))
+        start = {
+            "playIndex": pos, "vod_play_index": pos, "playindex": pos, "index": pos,
+            "vod_play_idx": pos, "play_index": pos,
+        }
+        vod = {"vod_id": vod_id or clicked, "vod_name": str(vname), "vod_pic": self._img(self._item_pic(it0)),
+               "type_name": type_name, "vod_remarks": str(it0.get("time_len") or it0.get("video_time") or it0.get("time") or ""),
                "vod_year": "", "vod_area": "", "vod_actor": "", "vod_director": "",
                "vod_content": self._tags_text(it0),
                "vod_play_from": "线路1", "vod_play_url": "#".join(urls)}
-        return {"list": [vod]}
+        vod.update(start)
+        out = {"list": [vod]}
+        out.update(start)
+        return out
 
     def _plan(self, tid):
         if tid in self.plans:
@@ -790,9 +830,9 @@ class Spider(BaseSpider):
     def _yl_page(self, ch, pg):
         pg = max(int(pg or 1), 1)
         if ch == "gossip":
-            return self._yl_ready(self._pick(self._call("/post/post_list", {"page": pg, "page_size": 12, "type": 2}).get("data")), "g", pg, 12)
+            return self._yl_ready(self._data_list(self._call("/post/post_list", {"page": pg, "page_size": 12, "type": 2})), "g", pg, 12)
         if ch == "radio":
-            return self._yl_ready(self._pick(self._call("/novel/novel_list", {"type": 2, "page": pg, "page_size": 20}).get("data")), "r", pg, 20)
+            return self._yl_ready(self._data_list(self._call("/novel/novel_list", {"type": 2, "page": pg, "page_size": 20})), "r", pg, 20)
         if ch == "comic":
             groups = self._yl_groups("/comic/comic_index", "yl_cc")
             if pg == 1:
@@ -805,7 +845,7 @@ class Spider(BaseSpider):
             payload = {"page": pg, "page_size": 20}
             if cid:
                 payload["cate_id"] = cid
-            return self._yl_ready(self._pick(self._call("/comic/comic_cate_list", payload).get("data")), "c", pg, 20)
+            return self._yl_ready(self._data_list(self._call("/comic/comic_cate_list", payload)), "c", pg, 20)
         groups = self._yl_groups("/novel/novel_index", "yl_nc")
         if pg == 1:
             return self._yl_ready(self._flat(groups), "n", pg, 40)
@@ -815,8 +855,8 @@ class Spider(BaseSpider):
                 cid = g.get("cate_id")
                 break
         if cid:
-            return self._yl_ready(self._pick(self._call("/novel/novel_cate_list", {"cate_id": cid, "page": pg, "page_size": 20}).get("data")), "n", pg, 20)
-        return self._yl_ready(self._pick(self._call("/novel/novel_list", {"type": 1, "page": pg, "page_size": 20}).get("data")), "n", pg, 20)
+            return self._yl_ready(self._data_list(self._call("/novel/novel_cate_list", {"cate_id": cid, "page": pg, "page_size": 20})), "n", pg, 20)
+        return self._yl_ready(self._data_list(self._call("/novel/novel_list", {"type": 1, "page": pg, "page_size": 20})), "n", pg, 20)
 
     def _live_subs(self):
         if self.lives:
@@ -943,9 +983,10 @@ class Spider(BaseSpider):
         total = len(plan)
         pc = max((total + per - 1) // per, 1)
         jobs = plan[(pg - 1) * per:pg * per]
-        items = self._batch(jobs)
-        self._short_cache_put("t_%s" % tid, pg, items)
-        return {"list": self._dedup(items), "page": pg, "pagecount": pc, "limit": 40, "total": total * 20}
+        raw = self._raw_videos(self._batch(jobs))
+        self._short_cache_put("t_%s" % tid, pg, raw)
+        vl = [self._vod(it) for it in raw]
+        return {"list": vl, "page": pg, "pagecount": pc, "limit": 40, "total": total * 20}
 
     def _sub_page(self, sid, pg):
         items = self._pick(self._call("/video/cate2_list", {"cate2_id": sid, "page": pg}).get("data"))
@@ -963,14 +1004,16 @@ class Spider(BaseSpider):
                 cnt = int(info.get("count") or 0)
             except Exception:
                 cnt = 0
-        self._short_cache_put("c2_%s" % sid, pg, items)
-        vl = self._dedup(items)
+        raw = self._raw_videos(items)
+        self._short_cache_put("c2_%s" % sid, pg, raw)
+        vl = [self._vod(it) for it in raw]
         pc = (cnt + 19) // 20 if cnt else (pg + 1 if len(vl) >= 20 else pg)
         return {"list": vl, "page": pg, "pagecount": max(pc, pg), "limit": 20, "total": cnt or pc * 20}
 
     def _page(self, items, pg, limit, bucket="v"):
-        self._short_cache_put(bucket, pg, items)
-        vl = self._dedup(items)
+        raw = self._raw_videos(items)
+        self._short_cache_put(bucket, pg, raw)
+        vl = [self._vod(it) for it in raw]
         pc = pg + 1 if len(vl) >= limit else pg
         return {"list": vl, "page": pg, "pagecount": pc, "limit": limit, "total": pc * limit}
 
@@ -979,12 +1022,14 @@ class Spider(BaseSpider):
         items = self._pick(self._call("/video/search_list", {"keyword": key, "page": pg}).get("data"))
         if not items and pg == 1:
             items = self._pick(self._call("/video/search_video_library", {"keyword": key, "page": pg}).get("data"))
-        vl = self._dedup(items)
+        raw = self._raw_videos(items)
+        self._short_cache_put("search_%s" % key, pg, raw)
+        vl = [self._vod(it) for it in raw]
         extra = []
         if pg == 1:
-            extra += self._yl_map(self._pick(self._call("/post/post_search", {"keyword": key, "page": 1, "page_size": 8}).get("data")), "g")
-            extra += self._yl_map(self._pick(self._call("/comic/comic_search", {"keyword": key, "page": 1, "page_size": 8}).get("data")), "c")
-            extra += self._yl_map(self._pick(self._call("/novel/novel_search", {"keyword": key, "page": 1, "page_size": 8}).get("data")), "n")
+            extra += self._yl_map(self._data_list(self._call("/post/post_search", {"keyword": key, "page": 1, "page_size": 8})), "g")
+            extra += self._yl_map(self._data_list(self._call("/comic/comic_search", {"keyword": key, "page": 1, "page_size": 8})), "c")
+            extra += self._yl_map(self._data_list(self._call("/novel/novel_search", {"keyword": key, "page": 1, "page_size": 8})), "n")
         seen = {x["vod_id"] for x in vl}
         for x in extra:
             if x["vod_id"] not in seen:
@@ -1125,7 +1170,14 @@ class Spider(BaseSpider):
         cached = self._play_detail(vid, vod_id=vid)
         if cached:
             return cached
-        vi = self._video_info(vid)
+        vi = {}
+        for path in ("/video/video_info", "/video/video_info_v3"):
+            r = self._call(path, {"video_id": vid, "uid": self.uid, "is_h5": 1})
+            if r.get("code") == 1:
+                cand = (r.get("data") or {}).get("video_info") or {}
+                if cand.get("url") or cand.get("video_line"):
+                    vi = cand
+                    break
         if not vi:
             return {"list": []}
         lines = [x for x in (vi.get("video_line") or []) if x.get("url")]
@@ -1221,7 +1273,14 @@ class Spider(BaseSpider):
                     u = str(it.get("url") or it.get("video_url") or "").strip()
                     if u.startswith("http"):
                         return {"parse": 0, "playUrl": "", "url": self._full(u), "header": self._hdr()}
-            vi = self._video_info(nid)
+            vi = {}
+            for path in ("/video/video_info", "/video/video_info_v3"):
+                r = self._call(path, {"video_id": nid, "uid": self.uid, "is_h5": 1})
+                if r.get("code") == 1:
+                    cand = (r.get("data") or {}).get("video_info") or {}
+                    if cand.get("url") or cand.get("video_line"):
+                        vi = cand
+                        break
             url = str(vi.get("url") or "")
             if not url:
                 for line in (vi.get("video_line") or []):

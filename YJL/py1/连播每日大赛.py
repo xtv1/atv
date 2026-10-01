@@ -1,3 +1,5 @@
+#发送任意消息到邮箱，自动获取每日大赛最新
+#免翻墙】地址：mrds.club@gmail.com
 import json
 import re
 import sys
@@ -30,7 +32,6 @@ class Spider(BaseSpider):
         }
         self.host = self.get_working_host()
         self.headers.update({'Origin': self.host, 'Referer': f"{self.host}/"})
-        print(f"使用站点: {self.host}")
 
     def getName(self):
         return "🌈 每日大赛|终极完美版"
@@ -45,28 +46,98 @@ class Spider(BaseSpider):
         global img_cache
         img_cache.clear()
 
+    def _get(self, url, timeout=4):
+        try:
+            return requests.get(
+                url,
+                headers=self.headers,
+                proxies=self.proxies,
+                timeout=timeout,
+                verify=False,
+                allow_redirects=True
+            )
+        except Exception:
+            return None
+
+    def _site_ok(self, html):
+        if not html or len(html) < 8000:
+            return False
+        t = html.lower()
+        return t.count('<article') >= 5 or ('每日大赛' in html and 'post-title' in t)
+
+    def _js_jump(self, html):
+        m = re.search(r'<a[^>]*href="(https://[^"]+)"[^>]*>\s*加载中', html)
+        if m:
+            return m.group(1).rstrip('/') + '/'
+        m = re.search(r'href="(https://[^"]+)"', html)
+        if m and '加载中' in html:
+            return m.group(1).rstrip('/') + '/'
+        return ''
+
+    def _pub_hosts(self, html):
+        m = re.search(r"Base64\.decode\('([A-Za-z0-9+/=]+)'\)", html or '')
+        if m:
+            try:
+                html = b64decode(m.group(1) + '===').decode('utf-8', 'ignore')
+            except Exception:
+                pass
+        suffixes = re.findall(r"words\.random\(\)\s*\+\s*'\.([a-z0-9.-]+\.[a-z]{2,})'", html or '')
+        if not suffixes:
+            suffixes = re.findall(r"'([a-z0-9-]+\.cc)'", html or '')
+        hosts, seen = [], set()
+        for s in suffixes:
+            s = s.lstrip('.')
+            if not s or s in seen:
+                continue
+            seen.add(s)
+            hosts.append('https://www.%s/' % s)
+        return hosts
+
     def get_working_host(self):
-        dynamic_urls = [
-            'https://www.mrds66.com/',
+        cached = ''
+        try:
+            cached = str(self.getCache('mrds_host') or '').rstrip('/')
+        except Exception:
+            cached = ''
+        seeds = [
+            (cached + '/') if cached else '',
             'https://mrdsa2.com/',
             'https://mrdsa1.com/',
+            'https://mrds.club/',
+            'https://www.mrds.fun/',
+            'https://www.mrds66.com/',
             'https://mrdsk.com/',
         ]
-        for url in dynamic_urls:
-            try:
-                response = requests.get(
-                    url,
-                    headers=self.headers,
-                    proxies=self.proxies,
-                    timeout=6,
-                    verify=False,
-                    allow_redirects=True
-                )
-                if response.status_code == 200:
-                    return response.url.rstrip('/')
-            except Exception:
+        queue, seen = [], set()
+        for u in seeds:
+            if u and u not in seen:
+                seen.add(u)
+                queue.append(u)
+        i = 0
+        while i < len(queue) and i < 16:
+            url = queue[i]
+            i += 1
+            r = self._get(url, timeout=4)
+            if r is None:
                 continue
-        return 'https://www.mrds66.com'
+            html = r.text or ''
+            final = (r.url or url).rstrip('/') + '/'
+            if self._site_ok(html):
+                host = final.rstrip('/')
+                try:
+                    self.setCache('mrds_host', host)
+                except Exception:
+                    pass
+                return host
+            jump = self._js_jump(html)
+            if jump and jump not in seen:
+                seen.add(jump)
+                queue.append(jump)
+            for h in self._pub_hosts(html):
+                if h not in seen:
+                    seen.add(h)
+                    queue.append(h)
+        return cached or 'https://www.htrnnxgg.cc'
 
     def homeContent(self, filter):
         try:

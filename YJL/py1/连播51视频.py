@@ -49,17 +49,34 @@ class Spider(BaseSpider):
 
     def get_working_host(self):
         dynamic_urls = [
-            'https://able.jbezfkd.cc/',
-            'https://back.jbezfkd.cc/'
+            'https://51sptv.com/',
+            'https://d3ms4wz4etinr5.cloudfront.net/',
+            'https://adjust.efamskfth.cc/',
+            'https://adjust.tbfshhlu.cc/',
         ]
         for url in dynamic_urls:
             try:
-                response = requests.get(url, headers=self.headers, proxies=self.proxies, timeout=10)
-                if response.status_code == 200:
+                response = requests.get(url, headers=self.headers, proxies=self.proxies, timeout=5)
+                if response.status_code == 200 and len(response.content) > 80000:
                     return url
             except Exception:
                 continue
-        return dynamic_urls[0]
+        try:
+            pub = requests.get('https://www.fxckdpgci.cc/', headers=self.headers, proxies=self.proxies, timeout=8).text
+            extra = ['https://%s/' % h for h in re.findall(r'[\w-]+\.cloudfront\.net', pub)]
+            extra += ['https://adjust.%s/' % s for s in re.findall(r"'\.([a-z0-9]+\.cc)'", pub)]
+            for url in extra:
+                if url in dynamic_urls:
+                    continue
+                try:
+                    response = requests.get(url, headers=self.headers, proxies=self.proxies, timeout=5)
+                    if response.status_code == 200 and len(response.content) > 80000:
+                        return url
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return dynamic_urls[1]
 
     def homeContent(self, filter):
         try:

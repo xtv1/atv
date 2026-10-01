@@ -10,7 +10,7 @@ import base64
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, unquote, urljoin
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 from base.spider import Spider
@@ -78,11 +78,21 @@ EPISODE_PATTERN = re.compile(r'^(.*?)(第\d+集)\s*(.*)$')
 SERIES_CLEAN_PATTERN = re.compile(r'^(.*?)(第\d+集|\d+集|完整版|无码版|爆燃来袭|重磅流出|高能开场|重磅来袭|已完结).*')
 
 # ==================== 图片解密配置 ====================
-# 封面为 AES-128-CBC 加密（密钥/IV 取自站点 /usr/plugins/tbxw/js/zzz.js），
-# 且加密图片实际托管在 CDN 域名上，请求前需把主机替换为 CDN_XHOST
-CDN_XHOST = "https://pic.xustgq.cn"
+# 封面为 AES-128-CBC 密文（密钥/IV 取自站点 /usr/plugins/tbxw/js/zzz.js）。
+# HTML 里已是真实图床（现为 pic.ndhixj.cn），禁止再改写到失效的 pic.xustgq.cn。
+# 壳子看不懂密文，必须走 localProxy 解密后再回图（对齐 91短剧）。
+CDN_XHOST = "https://pic.ndhixj.cn"
 IMG_AES_KEY = "f5d965df75336270"
 IMG_AES_IV = "97b60394abc2fbe1"
+PROXY_FALLBACK = "http://127.0.0.1:9978/proxy?do=py"
+_BAD_PIC = (
+    "data:", "base64,", "zw.png", "logo.png", "lazyload", "placeholder",
+    "nopic", "no-pic", "spacer.gif", "blank.gif", "load.gif", "loading.gif",
+)
+_PIC_ATTRS = (
+    "data-xkrkllgl", "data-original", "data-src", "data-echo",
+    "data-lazy-src", "data-url", "data-thumb",
+)
 
 class Spider(Spider):
     def getName(self):
@@ -272,57 +282,89 @@ class Spider(Spider):
         return videos
 
     def _extract_list_image(self, block):
-        """提取列表图片，失败返回空字符串而不是 None"""
-        xk = re.search(r'data-xkrkllgl="([^"]+)"', block)
-        if xk:
-            return self._cover_url(xk.group(1))
-        ds = re.search(r'data-src="([^"]+)"', block)
-        if ds:
-            return self._cover_url(ds.group(1))
-        src = re.search(r'<img[^>]*src="([^"]+)"', block)
-        if src and 'zw.png' not in src.group(1) and 'lazyload' not in src.group(1):
+        """列表封面：data-src / data-xkrkllgl 优先，跳过 zw.png 占位图"""
+        if not block:
+            return ''
+        for attr in _PIC_ATTRS:
+            m = re.search(attr + r'\s*=\s*"([^"]+)"', block, re.I)
+            if m:
+                pic = self._cover_url(m.group(1))
+                if pic:
+                    return pic
+        src = re.search(r'(?<![-\w.])src\s*=\s*"([^"]+)"', block)
+        if src:
             return self._cover_url(src.group(1))
         return ''
 
     def _fix_image_url(self, pic_url):
         if not pic_url:
             return ''
-        if pic_url.startswith('data:'):
-            return pic_url
+        pic_url = str(pic_url).strip().strip('"').strip("'")
+        if not pic_url:
+            return ''
+        low = pic_url.lower()
+        for bad in _BAD_PIC:
+            if bad in low:
+                return ''
         if pic_url.startswith('//'):
             return 'https:' + pic_url
+        if pic_url.startswith('http://') or pic_url.startswith('https://'):
+            return pic_url
         return urljoin(xurl, pic_url)
 
+    def _is_encrypted_pic(self, pic_url):
+        if not pic_url:
+            return False
+        low = pic_url.lower()
+        if re.search(r'/(?:new|xiao|upload|uploads)/', low):
+            return True
+        return any(h in low for h in (
+            'pic.ndhixj.cn', 'pic.xustgq.cn', 'pic.zdmhyg.cn',
+        ))
+
     def _cdn_image_url(self, pic_url):
-        """加密封面统一改写为 CDN 域名（站点 loadThumb 同款逻辑）"""
+        """只把失效图床主机换成当前 CDN，路径一律保留"""
         if not pic_url:
             return pic_url
-        if re.search(r'/(?:new|xiao|upload|uploads)/', pic_url):
-            return CDN_XHOST + re.sub(r'^https?://[^/]+', '', pic_url)
+        if 'pic.xustgq.cn' in pic_url:
+            return pic_url.replace('https://pic.xustgq.cn', CDN_XHOST).replace(
+                'http://pic.xustgq.cn', CDN_XHOST)
         return pic_url
 
     def _cover_url(self, raw_url):
-        """返回 TVBox 可显示的封面 URL：加密图走本地代理解密，普通图直链"""
+        """加密图走本地代理解密，普通图直链"""
         if not raw_url:
             return ''
-        raw_url = self._fix_image_url(raw_url)
-        if re.search(r'/(?:new|xiao|upload|uploads)/', raw_url):
+        raw_url = self._cdn_image_url(self._fix_image_url(raw_url))
+        if not raw_url:
+            return ''
+        if self._is_encrypted_pic(raw_url):
             return self._proxy_image_url(raw_url)
         return raw_url
 
+    def _proxy_base(self):
+        proxy_base = ''
+        try:
+            if hasattr(self, 'getProxyUrl'):
+                proxy_base = self.getProxyUrl() or ''
+        except Exception:
+            proxy_base = ''
+        if not proxy_base:
+            proxy_base = PROXY_FALLBACK
+        if '?' not in proxy_base:
+            proxy_base += '?do=py'
+        return proxy_base
+
     def _proxy_image_url(self, raw_url):
-        """将加密图转为代理链接（url 用 base64 编码，兼容 TVBox 参数传递），由 localProxy 解密"""
+        """密文封面包成本地代理，由 localProxy 解密后回图"""
         if not raw_url:
             return ''
         try:
             raw_url = self._cdn_image_url(raw_url)
-            proxy_base = self.getProxyUrl() if hasattr(self, 'getProxyUrl') else ''
-            if not proxy_base:
-                return raw_url
+            proxy_base = self._proxy_base()
             sep = '&' if '?' in proxy_base else '?'
-            b64 = base64.b64encode(raw_url.encode('utf-8')).decode('utf-8')
-            return f"{proxy_base}{sep}type=image&url={b64}"
-        except:
+            return f"{proxy_base}{sep}type=image&url={quote(raw_url, safe='')}"
+        except Exception:
             return raw_url
 
     # ==================== 详情页 ====================
@@ -360,13 +402,15 @@ class Spider(Spider):
                 purl = self._extract_video_13_strategies(html)
 
             if not pic:
+                img_m = re.search(r'<img[^>]*(?:id="post-thumb-\d+"|class="[^"]*thumb[^"]*")[^>]*>', html, re.I)
+                if img_m:
+                    pic = self._extract_list_image(img_m.group(0))
+            if not pic:
+                pic = self._extract_list_image(html[:8000])
+            if not pic:
                 pic_m = re.search(r'<meta[^>]*property="og:image"[^>]*content="([^"]*)"', html)
                 if pic_m:
                     pic = self._cover_url(pic_m.group(1))
-            if not pic:
-                img_m = re.search(r'<img[^>]*data-xkrkllgl="([^"]+)"', html)
-                if img_m:
-                    pic = self._cover_url(img_m.group(1))
 
             # 剧集聚合
             ep_info = EPISODE_PATTERN.search(title) if title else None
@@ -538,10 +582,15 @@ class Spider(Spider):
 
     # ==================== 本地代理 ====================
     def localProxy(self, params):
-        ptype = params.get('type', '')
+        ptype = str((params or {}).get('type') or '').lower()
+        url = str((params or {}).get('url') or '')
+        try:
+            url = unquote(url.strip())
+        except Exception:
+            pass
         if ptype == 'm3u8':
             return self._proxy_m3u8(params)
-        elif ptype == 'image':
+        if ptype in ('image', 'img', 'pic') or self._is_encrypted_pic(url):
             return self._proxy_image(params)
         return [404, "text/plain", "unsupported type"]
 
@@ -569,26 +618,40 @@ class Spider(Spider):
 
     # ---------- 图片解密代理（AES-128-CBC，纯 Python，兼容 TVBox Chaquopy） ----------
     def _proxy_image(self, params):
-        url = params.get('url', '')
-        if not url: return [404, "text/plain", "no url"]
+        url = params.get('url', '') or ''
+        if not url:
+            return [404, "text/plain", "no url"]
         try:
-            # url 参数可能为 base64 或直链，兼容两种
+            try:
+                url = unquote(str(url).strip())
+            except Exception:
+                pass
             if not url.startswith('http'):
                 try:
                     url = base64.b64decode(url).decode('utf-8')
                 except Exception:
                     pass
             url = self._cdn_image_url(url)
-            resp = self.session.get(url, headers={'Referer': xurl + '/'}, timeout=15, proxies=self.proxies)
-            if resp.status_code != 200: return [404, "text/plain", "fetch failed"]
+            resp = self.session.get(
+                url,
+                headers={'User-Agent': headerx['User-Agent'], 'Referer': xurl + '/', 'Accept': '*/*'},
+                timeout=15,
+                proxies=self.proxies,
+            )
+            if resp.status_code != 200:
+                return [404, "text/plain", "fetch failed"]
             decrypted_bytes = self._aes_decrypt_image(resp.content)
             if not decrypted_bytes:
                 return [500, "text/plain", "decrypt failed"]
             content_type = "image/jpeg"
-            if decrypted_bytes[:8] == b'\x89PNG\r\n\x1a\n': content_type = "image/png"
-            elif decrypted_bytes[:6] in (b'GIF89a', b'GIF87a'): content_type = "image/gif"
-            elif decrypted_bytes[:4] == b'RIFF' and decrypted_bytes[8:12] == b'WEBP': content_type = "image/webp"
-            elif decrypted_bytes[:2] == b'\xff\xd8': content_type = "image/jpeg"
+            if decrypted_bytes[:8] == b'\x89PNG\r\n\x1a\n':
+                content_type = "image/png"
+            elif decrypted_bytes[:6] in (b'GIF89a', b'GIF87a'):
+                content_type = "image/gif"
+            elif decrypted_bytes[:4] == b'RIFF' and decrypted_bytes[8:12] == b'WEBP':
+                content_type = "image/webp"
+            elif decrypted_bytes[:2] == b'\xff\xd8':
+                content_type = "image/jpeg"
             return [200, content_type, decrypted_bytes]
         except Exception as e:
             print(f"图片代理异常: {e}")
@@ -602,24 +665,34 @@ class Spider(Spider):
                 or data[:6] in (b'GIF89a', b'GIF87a')
                 or (data[:4] == b'RIFF' and data[8:12] == b'WEBP'))
 
+    def _strip_pkcs7(self, pt):
+        if not pt:
+            return pt
+        n = pt[-1]
+        if isinstance(n, str):
+            n = ord(n)
+        if 1 <= n <= 16 and len(pt) >= n and pt[-n:] == bytes([n] * n):
+            return pt[:-n]
+        return pt
+
     def _aes_decrypt_image(self, data):
-        """模拟网站 zzz.js 的 decryptImage：AES-128 解密图片字节（多组密钥，CBC/ECB，PKCS7）"""
+        """AES-128-CBC 解密封面。先 NoPadding（对齐 91短剧），PKCS7 解失败再兜底。"""
         if not data or len(data) < 16:
             return None
+        if len(data) % 16:
+            data = data[:len(data) - (len(data) % 16)]
         key = IMG_AES_KEY.encode('utf-8')
         iv = IMG_AES_IV.encode('utf-8')
-        key2 = (IMG_AES_KEY[8:] + IMG_AES_KEY[:8]).encode('utf-8')
-        iv2 = (IMG_AES_IV[8:] + IMG_AES_IV[:8]).encode('utf-8')
-        candidates = [(key, iv), (key2, iv2)]
         try:
-            for k, v in candidates:
-                dec = unpad(AES.new(k, AES.MODE_CBC, v).decrypt(data), 16)
-                if self._image_magic_ok(dec):
-                    return dec
-            for k, _ in candidates:
-                dec = unpad(AES.new(k, AES.MODE_ECB).decrypt(data), 16)
-                if self._image_magic_ok(dec):
-                    return dec
+            dec = AES.new(key, AES.MODE_CBC, iv).decrypt(data)
+            if self._image_magic_ok(dec):
+                return self._strip_pkcs7(dec)
+        except Exception:
+            pass
+        try:
+            dec = unpad(AES.new(key, AES.MODE_CBC, iv).decrypt(data), 16)
+            if self._image_magic_ok(dec):
+                return dec
         except Exception:
             pass
         return None
