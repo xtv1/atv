@@ -57,11 +57,56 @@
       "quickSearch": 0,
       "filterable": 0
     },
-     {
+    {
       "key": "电影天堂",
       "name": "电影天堂",
       "type": 0,
       "api": "http://caiji.dyttzyapi.com/api.php/provide/vod/at/xml/",
+      "playUrl": "",
+      "searchable": 1,
+      "quickSearch": 1
+    },
+    {
+      "key": "如意资源网",
+      "name": "如意资源网",
+      "type": 0,
+      "api": "https://cj.rycjapi.com/api.php/provide/vod/at/xml/",
+      "searchable": 1,
+      "quickSearch": 1,
+      "changeable": 1
+    },
+    {
+      "key": "影剧资源网",
+      "name": "影剧资源网",
+      "type": 1,
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod/at/josn/",
+      "playUrl": "",
+      "searchable": 1,
+      "quickSearch": 1
+    },
+    {
+      "key": "aqy",
+      "name": "aqy",
+      "type": 0,
+      "api": "https://www.iqiyizyapi.com/api.php/provide/vod/at/xml/",
+      "playUrl": "",
+      "searchable": 1,
+      "quickSearch": 1
+    },
+    {
+      "key": "大众资源",
+      "name": "大众资源",
+      "type": 0,
+      "api": " https://cdn.dzzyapi.com/api.php/provide/vod/at/xml/",
+      "playUrl": "",
+      "searchable": 1,
+      "quickSearch": 1
+    },
+    {
+      "key": "魔都资源采集网",
+      "name": "魔都资源采集网",
+      "type": 0,
+      "api": "https://www.mdzyapi.com/api.php/provide/vod/at/xml/",
       "playUrl": "",
       "searchable": 1,
       "quickSearch": 1
@@ -72,6 +117,15 @@
       "type": 3,
       "api": "csp_LiteApple",
       "jar": "./lib/fty.jar",
+      "searchable": 1,
+      "quickSearch": 1,
+      "changeable": 1
+    },
+    {
+      "key": "巨量资源网",
+      "name": "巨量资源网",
+      "type": 0,
+      "api": "https://api.juliang.live/api/provide/vod/at/xml/",
       "searchable": 1,
       "quickSearch": 1,
       "changeable": 1
@@ -103,7 +157,7 @@
       "searchable": 1,
       "quickSearch": 1
     },
-     {
+    {
       "key": "极速资源",
       "name": "极速资源",
       "type": 1,
