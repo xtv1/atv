@@ -24,6 +24,7 @@ ONE_SIGN_SUFFIX = "m4n2hjPeYWkD6tFpqKF^3HO^h24P@idT"
 ONE_IMAGE_KEY = b"saIZXc4yMvq0Iz56"
 ONE_IMAGE_IV = b"kbJYtBJUECT0oyjo"
 REQUEST_TIMEOUT = 15
+MIN_REQUEST_INTERVAL = 0.5
 
 
 def _pad(data):
@@ -98,6 +99,7 @@ class Spider(BaseSpider):
         self._hosts = {}
         self._session = requests.Session()
         self._session.headers.update({"User-Agent": "Dart/3.4 (dart:io)"})
+        self._last_request_time = 0.0
 
     def init(self, extend=""):
         self.extend = extend or ""
@@ -146,6 +148,10 @@ class Spider(BaseSpider):
         return {"ip": ip, "uuid": uuid, "timestamp": timestamp, "platform": platform, "token": self._token, "sign": sign, "user-key": user_key, "app-version": "2.6.3.1", "Content-Type": "application/x-www-form-urlencoded"}
 
     def _request(self, endpoint, params, retries=1):
+        elapsed = time.time() - self._last_request_time
+        if elapsed < MIN_REQUEST_INTERVAL:
+            time.sleep(MIN_REQUEST_INTERVAL - elapsed)
+        self._last_request_time = time.time()
         query = "&".join("{}={}".format(key, params[key]) for key in sorted(params))
         encoded = base64.b64encode(_aes(query.encode(), ONE_KEY, ONE_IV)).decode()
         primary = self._hosts.get("one", ONE_API)
